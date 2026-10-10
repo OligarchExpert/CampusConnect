@@ -109,6 +109,10 @@ function resolveCanonicalSkill(skillQuery, canonicalCatalogue) {
   return null;
 }
 
+function escapeRegex(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * Deterministically parses a project goal string into canonical required skills
  */
@@ -121,21 +125,38 @@ function extractSkillsFromGoal(goalText, canonicalCatalogue) {
   // 1. Check every canonical skill name
   for (const skill of canonicalCatalogue) {
     const skillNorm = normalizeString(skill.name);
+    const escaped = escapeRegex(skillNorm);
     // Boundary check or word inclusion on normalized text
-    const regex = new RegExp(`\\b${skillNorm.replace(/[/]/g, '[/]')}\\b`, 'i');
-    if (regex.test(textNorm) || textNorm.includes(skillNorm)) {
-      matchedSkillsMap.set(skill.id, skill);
+    try {
+      const regex = new RegExp(`(^|\\s|[^a-zA-Z0-9])${escaped}($|\\s|[^a-zA-Z0-9])`, 'i');
+      if (regex.test(textNorm) || textNorm.includes(skillNorm)) {
+        matchedSkillsMap.set(skill.id, skill);
+      }
+    } catch {
+      if (textNorm.includes(skillNorm)) {
+        matchedSkillsMap.set(skill.id, skill);
+      }
     }
   }
 
   // 2. Check keywords and synonyms
   for (const [phrase, canonicalName] of Object.entries(SYNONYM_MAP)) {
     const phraseNorm = normalizeString(phrase);
-    const regex = new RegExp(`\\b${phraseNorm.replace(/[/]/g, '[/]')}\\b`, 'i');
-    if (regex.test(textNorm) || textNorm.includes(phraseNorm)) {
-      const canonical = canonicalCatalogue.find(s => normalizeString(s.name) === normalizeString(canonicalName));
-      if (canonical) {
-        matchedSkillsMap.set(canonical.id, canonical);
+    const escaped = escapeRegex(phraseNorm);
+    try {
+      const regex = new RegExp(`(^|\\s|[^a-zA-Z0-9])${escaped}($|\\s|[^a-zA-Z0-9])`, 'i');
+      if (regex.test(textNorm) || textNorm.includes(phraseNorm)) {
+        const canonical = canonicalCatalogue.find(s => normalizeString(s.name) === normalizeString(canonicalName));
+        if (canonical) {
+          matchedSkillsMap.set(canonical.id, canonical);
+        }
+      }
+    } catch {
+      if (textNorm.includes(phraseNorm)) {
+        const canonical = canonicalCatalogue.find(s => normalizeString(s.name) === normalizeString(canonicalName));
+        if (canonical) {
+          matchedSkillsMap.set(canonical.id, canonical);
+        }
       }
     }
   }
