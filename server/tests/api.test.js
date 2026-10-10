@@ -159,6 +159,45 @@ async function runApiSecurityTests() {
     assert(jsonSent.message.includes('Admin accounts cannot be created'));
   });
 
+  // TEST 8: AI Matching integration contract format
+  test('Integration Contract: Matching service returns expected schema format', async () => {
+    const { MatchingService } = require('../src/services/matchingService');
+    const mockPool = {
+      async execute(sql) {
+        if (sql.includes('FROM skills')) {
+          return [[{ id: 1, name: 'Python', category: 'Programming' }]];
+        }
+        if (sql.includes('FROM user_skills')) {
+          return [[]];
+        }
+        if (sql.includes('FROM users')) {
+          return [[{
+            user_id: 2, name: 'Peer Student', email: 'peer@campus.edu',
+            bio: 'CS student', department: 'CS', avatar_url: null,
+            skill_id: 1, skill_name: 'Python', skill_category: 'Programming',
+            proficiency: 'advanced'
+          }]];
+        }
+        return [[]];
+      }
+    };
+
+    const service = new MatchingService(mockPool);
+    const recResult = await service.getRecommendations(1);
+
+    assert.strictEqual(recResult.success, true, 'Result must have success: true');
+    assert.strictEqual(recResult.available, true, 'Result must have available: true');
+    assert(Array.isArray(recResult.recommendations), 'recommendations must be an array');
+    assert(recResult.recommendations.length > 0, 'Should have at least 1 recommendation');
+
+    const rec = recResult.recommendations[0];
+    assert.strictEqual(rec.userId, 2);
+    assert(typeof rec.matchScore === 'number');
+    assert(Array.isArray(rec.sharedSkills));
+    assert(Array.isArray(rec.complementarySkills));
+    assert(rec.reasons && rec.reasons.length > 0);
+  });
+
   console.log('\n--- Running API & Security Unit Tests ---');
   for (const { name, fn } of tests) {
     try {
