@@ -30,6 +30,7 @@ const helpRoutes = require('./routes/helpRequests');
 const creditRoutes = require('./routes/credits');
 const adminRoutes = require('./routes/admin');
 const matchingRoutes = require('./routes/matching');
+const welfareRoutes = require('./routes/welfare');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -39,6 +40,7 @@ app.use('/api/help', helpRoutes);
 app.use('/api/credits', creditRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/matching', matchingRoutes);
+app.use('/api/welfare', welfareRoutes);
 
 // 404 handler
 app.use((req, res, next) => {

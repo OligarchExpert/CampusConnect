@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import StudentDashboard from './pages/StudentDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import StudentWelfareDashboard from './pages/StudentWelfareDashboard';
 import Profile from './pages/Profile';
 import Tasks from './pages/Tasks';
 import TaskDetail from './pages/TaskDetail';
@@ -16,6 +17,8 @@ import HelpRequests from './pages/HelpRequests';
 import HelpRequestDetail from './pages/HelpRequestDetail';
 import CreditHistory from './pages/CreditHistory';
 import SkillDiscovery from './pages/SkillDiscovery';
+import MyComplaints from './pages/MyComplaints';
+import ComplaintDetail from './pages/ComplaintDetail';
 
 export default function App() {
   return (
@@ -33,7 +36,13 @@ export default function App() {
             <ProtectedRoute roles={['faculty']}><FacultyDashboard /></ProtectedRoute>
           } />
           <Route path="/admin" element={
-            <ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>
+            <ProtectedRoute roles={['admin']}><StudentWelfareDashboard /></ProtectedRoute>
+          } />
+          <Route path="/complaints" element={
+            <ProtectedRoute><MyComplaints /></ProtectedRoute>
+          } />
+          <Route path="/complaints/:id" element={
+            <ProtectedRoute><ComplaintDetail /></ProtectedRoute>
           } />
           <Route path="/profile/:userId" element={
             <ProtectedRoute><Profile /></ProtectedRoute>

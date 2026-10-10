@@ -7,6 +7,7 @@ const { runCreditEngineTests } = require('./creditEngine.test');
 const { runApiSecurityTests } = require('./api.test');
 const { runMatchingTests } = require('./matching.test');
 const { runEndToEndScenarioTests } = require('./e2e-scenarios.test');
+const { runWelfareTests } = require('./welfare.test');
 
 async function main() {
   console.log('====================================================');
@@ -17,9 +18,10 @@ async function main() {
   const suite2 = await runApiSecurityTests();
   const suite3 = await runMatchingTests();
   const suite4 = await runEndToEndScenarioTests();
+  const suite5 = await runWelfareTests();
 
-  const totalPassed = suite1.passed + suite2.passed + suite3.passed + suite4.passed;
-  const totalFailed = suite1.failed + suite2.failed + suite3.failed + suite4.failed;
+  const totalPassed = suite1.passed + suite2.passed + suite3.passed + suite4.passed + suite5.passed;
+  const totalFailed = suite1.failed + suite2.failed + suite3.failed + suite4.failed + suite5.failed;
 
   console.log('====================================================');
   console.log(`TOTAL RESULTS: ${totalPassed} PASSED, ${totalFailed} FAILED`);

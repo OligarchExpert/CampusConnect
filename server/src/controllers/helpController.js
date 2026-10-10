@@ -76,11 +76,25 @@ const getRequest = async (req, res) => {
               u.name AS requester_name,
               u.email AS requester_email,
               u.department AS requester_department,
+              u.programme AS requester_programme,
+              u.section AS requester_section,
+              u.is_advisor_approved AS requester_is_advisor_approved,
+              adv_req.name AS requester_advisor_name,
               h.name AS helper_name,
-              h.email AS helper_email
+              h.email AS helper_email,
+              h.department AS helper_department,
+              h.programme AS helper_programme,
+              h.section AS helper_section,
+              h.is_advisor_approved AS helper_is_advisor_approved,
+              h.faculty_verified_skills AS helper_faculty_verified_skills,
+              adv_h.name AS helper_advisor_name
        FROM help_requests hr
        JOIN users u ON u.id = hr.requester_id
+       LEFT JOIN class_advisors ca_req ON ca_req.id = u.advisor_id
+       LEFT JOIN users adv_req ON adv_req.id = ca_req.faculty_id
        LEFT JOIN users h ON h.id = hr.helper_id
+       LEFT JOIN class_advisors ca_h ON ca_h.id = h.advisor_id
+       LEFT JOIN users adv_h ON adv_h.id = ca_h.faculty_id
        WHERE hr.id = ?`,
       [reqId]
     );
@@ -89,7 +103,55 @@ const getRequest = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Help request not found' });
     }
 
-    res.json({ success: true, request: rows[0] });
+    const request = rows[0];
+
+    // If helper is assigned, fetch helper's skills, completed helps, and shared skills
+    if (request.helper_id) {
+      const [helperSkills] = await pool.execute(
+        `SELECT s.id, s.name, s.category, us.proficiency
+         FROM user_skills us
+         JOIN skills s ON s.id = us.skill_id
+         WHERE us.user_id = ?`,
+        [request.helper_id]
+      );
+
+      const [requesterSkills] = await pool.execute(
+        `SELECT skill_id FROM user_skills WHERE user_id = ?`,
+        [request.requester_id]
+      );
+      const reqSkillSet = new Set(requesterSkills.map(r => r.skill_id));
+
+      const sharedSkills = helperSkills
+        .filter(hs => reqSkillSet.has(hs.id))
+        .map(hs => hs.name);
+
+      const [completionsRow] = await pool.execute(
+        'SELECT COUNT(*) AS total_helped FROM help_completions WHERE helper_id = ?',
+        [request.helper_id]
+      );
+
+      const [balRow] = await pool.execute(
+        'SELECT COALESCE(SUM(amount), 0) AS balance FROM credit_transactions WHERE user_id = ?',
+        [request.helper_id]
+      );
+
+      request.helper_profile = {
+        id: request.helper_id,
+        name: request.helper_name,
+        department: request.helper_department,
+        programme: request.helper_programme,
+        section: request.helper_section,
+        is_advisor_approved: !!request.helper_is_advisor_approved,
+        advisor_name: request.helper_advisor_name,
+        faculty_verified_skills: request.helper_faculty_verified_skills,
+        skills: helperSkills,
+        shared_skills: sharedSkills,
+        total_completed_helps: parseInt(completionsRow[0]?.total_helped || 0, 10),
+        credit_balance: parseInt(balRow[0]?.balance || 0, 10)
+      };
+    }
+
+    res.json({ success: true, request });
   } catch (err) {
     console.error('[Help getRequest error]', err);
     res.status(500).json({ success: false, message: 'Failed to retrieve help request' });

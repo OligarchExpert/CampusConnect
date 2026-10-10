@@ -4,8 +4,15 @@ const getProfile = async (req, res) => {
   const userId = parseInt(req.params.userId, 10);
   try {
     const [rows] = await pool.execute(
-      `SELECT id, name, email, role, bio, avatar_url, department, created_at
-       FROM users WHERE id = ? AND is_active = 1`,
+      `SELECT u.id, u.name, u.email, u.role, u.bio, u.avatar_url, u.department,
+              u.student_id_num, u.programme, u.academic_year, u.section,
+              u.advisor_id, u.is_advisor_approved, u.advisor_approved_at,
+              u.faculty_verified_skills, u.created_at,
+              adv_u.name AS advisor_name, adv_u.department AS advisor_department
+       FROM users u
+       LEFT JOIN class_advisors ca ON ca.id = u.advisor_id
+       LEFT JOIN users adv_u ON adv_u.id = ca.faculty_id
+       WHERE u.id = ? AND u.is_active = 1`,
       [userId]
     );
 
@@ -27,12 +34,18 @@ const getProfile = async (req, res) => {
       [userId]
     );
 
+    const [helpStats] = await pool.execute(
+      'SELECT COUNT(*) AS total_helped FROM help_completions WHERE helper_id = ?',
+      [userId]
+    );
+
     res.json({
       success: true,
       profile: {
         ...rows[0],
         skills,
-        creditBalance: parseInt(creditRows[0].balance, 10)
+        creditBalance: parseInt(creditRows[0].balance, 10),
+        totalCompletedHelps: parseInt(helpStats[0]?.total_helped || 0, 10)
       }
     });
   } catch (err) {
@@ -49,6 +62,14 @@ const updateProfile = async (req, res) => {
     return res.status(403).json({
       success: false,
       message: 'You are not authorized to edit another user\'s profile'
+    });
+  }
+
+  // Security check: Students cannot grant themselves advisor approved badges or change advisor links
+  if (req.user.role === 'student' && (req.body.is_advisor_approved !== undefined || req.body.advisor_id !== undefined)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Students cannot grant themselves the Class Advisor Approved badge or change advisor assignments'
     });
   }
 

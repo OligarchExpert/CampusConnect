@@ -2,14 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { profileService } from '../services/profileService';
+import { welfareService } from '../services/welfareService';
 import SkillBadge from '../components/SkillBadge';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
+import ReportConcernModal from '../components/ReportConcernModal';
 
 export default function Profile() {
   const { userId } = useParams();
   const { user: me } = useAuth();
-  const isOwn = me?.id === parseInt(userId, 10) || me?.role === 'admin';
+  const isOwn = me?.id === parseInt(userId, 10);
+  const isAdmin = me?.role === 'admin';
 
   const [profile, setProfile] = useState(null);
   const [allSkills, setAllSkills] = useState([]);
@@ -21,34 +24,37 @@ export default function Profile() {
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const loadProfile = async () => {
+    try {
+      const [p, allS] = await Promise.all([
+        profileService.getProfile(userId),
+        profileService.getAllSkills()
+      ]);
+      setProfile(p.profile);
+      setAllSkills(allS.skills || []);
+      setEditForm({
+        name: p.profile.name,
+        bio: p.profile.bio || '',
+        department: p.profile.department || ''
+      });
+      setSelectedSkills(
+        (p.profile.skills || []).map(s => ({
+          skill_id: s.id,
+          proficiency: s.proficiency
+        }))
+      );
+    } catch (err) {
+      setError('Failed to load profile.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [p, allS] = await Promise.all([
-          profileService.getProfile(userId),
-          profileService.getAllSkills()
-        ]);
-        setProfile(p.profile);
-        setAllSkills(allS.skills || []);
-        setEditForm({
-          name: p.profile.name,
-          bio: p.profile.bio || '',
-          department: p.profile.department || ''
-        });
-        setSelectedSkills(
-          (p.profile.skills || []).map(s => ({
-            skill_id: s.id,
-            proficiency: s.proficiency
-          }))
-        );
-      } catch (err) {
-        setError('Failed to load profile.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    loadProfile();
   }, [userId]);
 
   const handleSaveProfile = async (e) => {
@@ -71,14 +77,43 @@ export default function Profile() {
     setSaving(true);
     try {
       await profileService.updateSkills(userId, selectedSkills);
-      const p = await profileService.getProfile(userId);
-      setProfile(p.profile);
+      await loadProfile();
       setEditingSkills(false);
       setSaveMsg('Skills updated successfully!');
     } catch (err) {
       setSaveMsg('Failed to save skills.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleVerifyStudent = async () => {
+    const reason = window.prompt('Enter reason for issuing Class Advisor Approved badge:');
+    if (!reason || !reason.trim()) return;
+    setActionLoading(true);
+    try {
+      await welfareService.verifyStudent({ student_id: userId, reason: reason.trim() });
+      setSaveMsg('Class Advisor Approved badge awarded!');
+      await loadProfile();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to verify student');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRevokeStudent = async () => {
+    const reason = window.prompt('Enter mandatory reason for revoking Class Advisor badge:');
+    if (!reason || !reason.trim()) return;
+    setActionLoading(true);
+    try {
+      await welfareService.revokeStudent({ student_id: userId, reason: reason.trim() });
+      setSaveMsg('Class Advisor badge revoked.');
+      await loadProfile();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to revoke badge');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -106,6 +141,9 @@ export default function Profile() {
     return acc;
   }, {});
 
+  // Can the current user verify this student?
+  const canVerify = (isAdmin || me?.role === 'faculty') && profile.role === 'student';
+
   return (
     <div className="page-container">
       {saveMsg && (
@@ -115,22 +153,126 @@ export default function Profile() {
       )}
 
       <div className="profile-grid">
+        {/* Main Identity & Academic Card */}
         <div className="card profile-card">
           <div className="profile-avatar">{profile.name?.[0]?.toUpperCase()}</div>
           {!editing ? (
             <>
-              <h2 className="profile-name">{profile.name}</h2>
+              <h2 className="profile-name" style={{ marginBottom: 4 }}>{profile.name}</h2>
               <span className={`badge badge-${profile.role}`}>{profile.role}</span>
-              <p className="profile-dept">{profile.department || 'No department specified'}</p>
-              <p className="profile-bio">{profile.bio || 'No bio provided yet.'}</p>
-              <div className="profile-credit">
-                <strong>{profile.creditBalance ?? 0}</strong> verified credits
+
+              {/* Trust Badges */}
+              <div style={{ marginTop: 12, marginBottom: 12 }}>
+                {profile.is_advisor_approved ? (
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '4px 10px', backgroundColor: '#ecfdf5', border: '1px solid #10b981',
+                    borderRadius: 20, color: '#047857', fontWeight: 600, fontSize: '0.85rem'
+                  }} title="Class identity and registration confirmed by authorized Class Advisor. Does not indicate technical skill competence.">
+                    <span>🛡️ Class Advisor Approved</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#065f46' }}>✓ Verified</span>
+                  </div>
+                ) : (
+                  profile.role === 'student' && (
+                    <span style={{ fontSize: '0.8rem', color: '#6b7280', fontStyle: 'italic' }}>
+                      Identity Verification Pending
+                    </span>
+                  )
+                )}
               </div>
-              {isOwn && (
-                <button className="btn btn-outline btn-sm" onClick={() => setEditing(true)} style={{ marginTop: 12 }}>
-                  Edit Profile
-                </button>
-              )}
+
+              {/* Academic Affiliation Details */}
+              <div style={{
+                textAlign: 'left', width: '100%', backgroundColor: '#f9fafb',
+                padding: '12px', borderRadius: '6px', margin: '12px 0', fontSize: '0.875rem'
+              }}>
+                {profile.student_id_num && (
+                  <p style={{ margin: '4px 0' }}>
+                    <strong>Student ID:</strong> {profile.student_id_num}
+                  </p>
+                )}
+                {profile.programme && (
+                  <p style={{ margin: '4px 0' }}>
+                    <strong>Programme:</strong> {profile.programme}
+                  </p>
+                )}
+                {profile.academic_year && (
+                  <p style={{ margin: '4px 0' }}>
+                    <strong>Year & Section:</strong> Year {profile.academic_year} ({profile.section || 'N/A'})
+                  </p>
+                )}
+                <p style={{ margin: '4px 0' }}>
+                  <strong>Department:</strong> {profile.department || 'Not specified'}
+                </p>
+                {profile.advisor_name && (
+                  <p style={{ margin: '4px 0' }}>
+                    <strong>Class Advisor:</strong> {profile.advisor_name}
+                  </p>
+                )}
+              </div>
+
+              <p className="profile-bio">{profile.bio || 'No bio provided yet.'}</p>
+
+              {/* Contribution Statistics */}
+              <div style={{ display: 'flex', justifyContent: 'space-around', width: '100%', margin: '16px 0', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#2563eb' }}>
+                    {profile.creditBalance ?? 0}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Verified Credits</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#059669' }}>
+                    {profile.totalCompletedHelps ?? 0}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Helps Completed</div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', marginTop: 8 }}>
+                {isOwn && (
+                  <button className="btn btn-outline btn-sm" onClick={() => setEditing(true)}>
+                    Edit Profile
+                  </button>
+                )}
+
+                {/* Class Advisor / Welfare Verification Actions */}
+                {canVerify && !isOwn && (
+                  <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 8, marginTop: 4 }}>
+                    {!profile.is_advisor_approved ? (
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={handleVerifyStudent}
+                        disabled={actionLoading}
+                        style={{ width: '100%' }}
+                      >
+                        {actionLoading ? 'Processing…' : '✓ Issue Advisor Approved Badge'}
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-sm btn-outline"
+                        onClick={handleRevokeStudent}
+                        disabled={actionLoading}
+                        style={{ width: '100%', color: '#dc2626', borderColor: '#fca5a5' }}
+                      >
+                        {actionLoading ? 'Processing…' : 'Revoke Advisor Badge'}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Report a Concern */}
+                {!isOwn && (
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => setShowReportModal(true)}
+                    style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', marginTop: 4 }}
+                  >
+                    🚩 Report a Concern to Student Welfare
+                  </button>
+                )}
+              </div>
             </>
           ) : (
             <form onSubmit={handleSaveProfile} style={{ width: '100%' }}>
@@ -169,9 +311,15 @@ export default function Profile() {
           )}
         </div>
 
+        {/* Skills Card */}
         <div className="card skills-card">
           <div className="card-header-row">
-            <h3 className="card-title">Skills & Proficiencies</h3>
+            <div>
+              <h3 className="card-title">Skills & Declared Proficiencies</h3>
+              <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '2px 0 0 0' }}>
+                Note: Skills represent student-declared proficiency unless marked with verified evidence.
+              </p>
+            </div>
             {isOwn && (
               <button className="btn btn-sm btn-outline" onClick={() => setEditingSkills(!editingSkills)}>
                 {editingSkills ? 'Done / Cancel' : 'Manage Skills'}
@@ -240,6 +388,17 @@ export default function Profile() {
           )}
         </div>
       </div>
+
+      {/* Report Concern Modal */}
+      <ReportConcernModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        reportedUserId={profile.id}
+        reportedUserName={profile.name}
+        contextType="user"
+        contextId={profile.id}
+        onSuccess={() => setSaveMsg('Your concern was submitted to Student Welfare.')}
+      />
     </div>
   );
 }

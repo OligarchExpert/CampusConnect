@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { helpService } from '../services/helpService';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
+import ReportConcernModal from '../components/ReportConcernModal';
 
 export default function HelpRequestDetail() {
   const { id } = useParams();
@@ -15,6 +16,7 @@ export default function HelpRequestDetail() {
   const [error, setError] = useState('');
   const [actionMsg, setActionMsg] = useState('');
   const [acting, setActing] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const load = async () => {
     try {
@@ -244,6 +246,117 @@ export default function HelpRequestDetail() {
           </div>
         )}
       </div>
+
+      {/* Helper Trust & Reputation Card */}
+      {request.helper_id && (
+        <div className="card" style={{ marginTop: 20, borderLeft: '4px solid #3b82f6' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+                <span>🤝 Helper Trust Profile: {request.helper_name}</span>
+                {request.helper_profile?.is_advisor_approved && (
+                  <span style={{
+                    fontSize: '0.8rem', background: '#ecfdf5', color: '#047857',
+                    border: '1px solid #10b981', padding: '2px 8px', borderRadius: 12, fontWeight: 600
+                  }}>
+                    🛡️ Class Advisor Approved
+                  </span>
+                )}
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: '4px 0 0 0' }}>
+                {request.helper_profile?.programme || request.helper_department || 'Amrita Student'}
+                {request.helper_profile?.section ? ` • Section: ${request.helper_profile.section}` : ''}
+                {request.helper_profile?.advisor_name ? ` • Advisor: ${request.helper_profile.advisor_name}` : ''}
+              </p>
+            </div>
+
+            <button
+              className="btn btn-sm"
+              onClick={() => setShowReportModal(true)}
+              style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}
+            >
+              🚩 Report a Concern
+            </button>
+          </div>
+
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: 16, marginTop: 16, padding: '12px', background: '#f8fafc', borderRadius: 6
+          }}>
+            <div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#4b5563' }}>Identity Verification</div>
+              <div style={{ fontSize: '0.9rem', marginTop: 2 }}>
+                {request.helper_profile?.is_advisor_approved ? (
+                  <span style={{ color: '#059669', fontWeight: 600 }}>✓ Verified by Class Advisor</span>
+                ) : (
+                  <span style={{ color: '#6b7280', fontStyle: 'italic' }}>Pending Advisor Verification</span>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#4b5563' }}>Peer Contribution Record</div>
+              <div style={{ fontSize: '0.9rem', marginTop: 2 }}>
+                <strong>{request.helper_profile?.total_completed_helps ?? 0}</strong> completed peer assists
+                {' '}({request.helper_profile?.credit_balance ?? 0} credits)
+              </div>
+            </div>
+
+            {request.helper_profile?.shared_skills?.length > 0 && (
+              <div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#4b5563' }}>Shared Skills</div>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                  {request.helper_profile.shared_skills.map(s => (
+                    <span key={s} style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 6px', borderRadius: 4, fontSize: '0.75rem' }}>
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Helper Skills */}
+          {request.helper_profile?.skills?.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#4b5563', marginBottom: 6 }}>
+                Helper's Declared Skills:
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {request.helper_profile.skills.map(sk => (
+                  <span key={sk.id} style={{
+                    background: '#f1f5f9', border: '1px solid #e2e8f0',
+                    padding: '2px 8px', borderRadius: 4, fontSize: '0.8rem'
+                  }}>
+                    {sk.name} <span style={{ color: '#64748b', fontSize: '0.75rem' }}>({sk.proficiency})</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Important Trust Notice */}
+          <div style={{
+            marginTop: 14, fontSize: '0.8rem', color: '#64748b',
+            background: '#fff', border: '1px dashed #cbd5e1', padding: '8px 12px', borderRadius: 4
+          }}>
+            ℹ️ <strong>Peer Integrity Note:</strong> A Class Advisor badge confirms the student's identity and enrollment,
+            not that their technical explanations are guaranteed correct. High credits do not substitute for independent verification.
+            You may raise a concern with Student Welfare at any time, even after confirming help.
+          </div>
+        </div>
+      )}
+
+      {/* Report Concern Modal */}
+      <ReportConcernModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        reportedUserId={request.helper_id || request.requester_id}
+        reportedUserName={request.helper_name || request.requester_name}
+        contextType="help_request"
+        contextId={request.id}
+        onSuccess={() => setActionMsg('Your concern was submitted to Student Welfare for review.')}
+      />
     </div>
   );
 }
