@@ -1,80 +1,109 @@
 /**
- * AI Matching Integration Contract — Route Mounting Point
+ * Matching Routes — /api/matching
  *
- * This router is mounted at `/api/matching`.
- *
- * It is reserved for the AI Skill Matching developer working on a separate feature branch.
- *
- * =========================================================================
- * EXPECTED CONTRACT FOR AI DEVELOPER:
- * =========================================================================
- *
- * 1. GET /api/matching/recommendations
- *    Auth: Bearer JWT (student)
- *    Purpose: Returns recommended peer collaborators based on complementary skills.
- *    Response Format:
- *    {
- *      "success": true,
- *      "available": true,
- *      "recommendations": [
- *        {
- *          "userId": 4,
- *          "name": "Sam Helper",
- *          "department": "Mathematics",
- *          "matchScore": 0.88,
- *          "sharedSkills": ["SQL", "Statistics"],
- *          "reason": "Complementary skills in data analysis"
- *        }
- *      ]
- *    }
- *
- * 2. GET /api/matching/skills/discover
- *    Auth: Bearer JWT (student)
- *    Purpose: Recommends new skills for the student to learn based on campus trends.
- *    Response Format:
- *    {
- *      "success": true,
- *      "available": true,
- *      "suggestions": [
- *        {
- *          "skillId": 11,
- *          "skillName": "Machine Learning",
- *          "category": "Data Science",
- *          "reason": "High demand in current faculty research projects"
- *        }
- *      ]
- *    }
- *
- * Database tables to query:
- * - `skills` (id, name, category)
- * - `user_skills` (user_id, skill_id, proficiency)
- * - `users` (id, name, role, department, bio)
- *
- * Use the database pool: const pool = require('../config/db');
- * =========================================================================
+ * Implements:
+ * - GET  /api/matching/recommendations (peer collaborator recommendations)
+ * - GET  /api/matching/skills/discover (emerging campus skills to learn)
+ * - POST /api/matching/match-goal      (AI/Rule-based goal teammate matching)
+ * - GET  /api/matching/people          (discover-people multi-criteria search and filter)
  */
 
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
+const { MatchingService } = require('../services/matchingService');
 
-// Default fallback response before AI developer's feature is merged
-router.get('/recommendations', authenticateToken, (req, res) => {
-  res.json({
-    success: true,
-    available: false,
-    message: 'AI skill matching is currently under development on a feature branch. Integration pending.',
-    recommendations: []
-  });
+const matchingService = new MatchingService();
+
+/**
+ * GET /api/matching/recommendations
+ * Recommends peer collaborators based on complementary & shared skills
+ */
+router.get('/recommendations', authenticateToken, async (req, res, next) => {
+  try {
+    const result = await matchingService.getRecommendations(req.user.id);
+    res.json(result);
+  } catch (err) {
+    console.error('[Matching Route Error: recommendations]', err);
+    next(err);
+  }
 });
 
-router.get('/skills/discover', authenticateToken, (req, res) => {
-  res.json({
-    success: true,
-    available: false,
-    message: 'AI skill discovery is currently under development on a feature branch. Integration pending.',
-    suggestions: []
-  });
+/**
+ * GET /api/matching/skills/discover
+ * Recommends skills for the student to learn based on campus demand
+ */
+router.get('/skills/discover', authenticateToken, async (req, res, next) => {
+  try {
+    const result = await matchingService.discoverEmergingSkills(req.user.id);
+    res.json(result);
+  } catch (err) {
+    console.error('[Matching Route Error: skills/discover]', err);
+    next(err);
+  }
+});
+
+/**
+ * POST /api/matching/match-goal
+ * Finds matching teammates for a natural language project goal or target skills
+ * Body: { goal: string, skillIds?: number[] }
+ */
+router.post('/match-goal', authenticateToken, async (req, res, next) => {
+  try {
+    const { goal, skillIds } = req.body;
+
+    if (!goal && (!skillIds || !Array.isArray(skillIds) || skillIds.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a project goal description or select at least one skill.'
+      });
+    }
+
+    if (goal && typeof goal !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Goal description must be a text string.'
+      });
+    }
+
+    const result = await matchingService.matchGoal(req.user.id, goal || '', skillIds || []);
+    res.json(result);
+  } catch (err) {
+    console.error('[Matching Route Error: match-goal]', err);
+    next(err);
+  }
+});
+
+/**
+ * GET /api/matching/people
+ * Search and filter students by name, skill, category, proficiency, and mode
+ * Query params: search, skillId, skillIds, category, minProficiency, mode
+ */
+router.get('/people', authenticateToken, async (req, res, next) => {
+  try {
+    const { search, skillId, skillIds, category, minProficiency, mode } = req.query;
+
+    let parsedSkillIds = [];
+    if (skillIds) {
+      parsedSkillIds = Array.isArray(skillIds)
+        ? skillIds.map(Number)
+        : skillIds.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n));
+    }
+
+    const result = await matchingService.discoverPeople(req.user.id, {
+      search: search || '',
+      skillId: skillId ? Number(skillId) : null,
+      skillIds: parsedSkillIds,
+      category: category || '',
+      minProficiency: minProficiency || '',
+      mode: mode || 'all'
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('[Matching Route Error: people]', err);
+    next(err);
+  }
 });
 
 module.exports = router;
