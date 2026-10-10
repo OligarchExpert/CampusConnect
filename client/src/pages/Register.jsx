@@ -72,7 +72,7 @@ export default function Register() {
 
         <form onSubmit={handleSubmit} className="auth-form" noValidate>
           <Field name="name" label="Full Name" placeholder="Your full name" />
-          <Field name="email" label="Email address" type="email" placeholder="you@campus.edu" />
+          <Field name="email" label="University or Demo Email Address" type="email" placeholder="e.g. name@cb.students.amrita.edu or you@campus.edu" />
 
           <div className="form-group">
             <label>Password</label>

@@ -1,0 +1,179 @@
+-- ============================================================
+-- CampusConnect: Amrita Demonstration Dataset (Idempotent)
+-- For local demonstration & test evaluation only.
+-- All passwords: "Demo1234!" (bcrypt hashed: $2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q)
+-- ============================================================
+
+USE campusconnect_db;
+
+-- 1. Realistic Demo Accounts
+INSERT INTO users (name, email, password, role, bio, department, is_active)
+VALUES
+  (
+    'Radhakrishna',
+    'radhakrishna@cb.students.amrita.edu',
+    '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
+    'student',
+    'Senior CSE undergraduate passionate about full-stack web architectures and cloud systems. Available to pair on React, Express, and distributed backend projects.',
+    'Computer Science and Engineering',
+    1
+  ),
+  (
+    'Anu',
+    'anu.demo@cb.students.amrita.edu',
+    '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
+    'student',
+    'AI & Data Science student exploring machine learning pipelines, predictive modeling, and campus data analytics. Happy to assist peers in Python and SQL.',
+    'Artificial Intelligence & Data Science',
+    1
+  ),
+  (
+    'Rahul',
+    'rahul.demo@cb.students.amrita.edu',
+    '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
+    'student',
+    'ECE student focused on systems programming, algorithmic mathematics, and Linux performance tuning.',
+    'Electronics and Communication Engineering',
+    1
+  ),
+  (
+    'Priya',
+    'priya.demo@cb.students.amrita.edu',
+    '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
+    'student',
+    'Interaction designer creating student-centric design systems, Figma prototypes, and accessible web interfaces.',
+    'Computer Science and Engineering',
+    1
+  ),
+  (
+    'Demo Faculty',
+    'faculty.demo@cb.amrita.edu',
+    '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
+    'faculty',
+    'Faculty Coordinator for Student Innovation & Peer Learning. Supervising academic research tasks, sustainability programs, and peer mentoring.',
+    'Computer Science and Engineering',
+    1
+  ),
+  (
+    'Demo Administrator',
+    'admin.demo@cb.amrita.edu',
+    '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
+    'admin',
+    'CampusConnect platform administrator handling governance, audit logs, and verified credit ledger inspection.',
+    'Campus Academic Administration',
+    1
+  )
+ON DUPLICATE KEY UPDATE
+  bio = VALUES(bio),
+  department = VALUES(department),
+  is_active = VALUES(is_active);
+
+-- 2. User Skills Assignments (Using dynamic subqueries to preserve foreign key stability)
+
+-- Radhakrishna's Skills
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'expert' FROM users u, skills s
+WHERE u.email = 'radhakrishna@cb.students.amrita.edu' AND s.name = 'JavaScript';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'advanced' FROM users u, skills s
+WHERE u.email = 'radhakrishna@cb.students.amrita.edu' AND s.name = 'React';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'advanced' FROM users u, skills s
+WHERE u.email = 'radhakrishna@cb.students.amrita.edu' AND s.name = 'Node.js';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'intermediate' FROM users u, skills s
+WHERE u.email = 'radhakrishna@cb.students.amrita.edu' AND s.name = 'Docker';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'advanced' FROM users u, skills s
+WHERE u.email = 'radhakrishna@cb.students.amrita.edu' AND s.name = 'Git';
+
+-- Anu's Skills
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'expert' FROM users u, skills s
+WHERE u.email = 'anu.demo@cb.students.amrita.edu' AND s.name = 'Python';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'advanced' FROM users u, skills s
+WHERE u.email = 'anu.demo@cb.students.amrita.edu' AND s.name = 'Data Analysis';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'advanced' FROM users u, skills s
+WHERE u.email = 'anu.demo@cb.students.amrita.edu' AND s.name = 'Machine Learning';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'advanced' FROM users u, skills s
+WHERE u.email = 'anu.demo@cb.students.amrita.edu' AND s.name = 'SQL';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'intermediate' FROM users u, skills s
+WHERE u.email = 'anu.demo@cb.students.amrita.edu' AND s.name = 'Statistics';
+
+-- Rahul's Skills
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'advanced' FROM users u, skills s
+WHERE u.email = 'rahul.demo@cb.students.amrita.edu' AND s.name = 'C++';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'advanced' FROM users u, skills s
+WHERE u.email = 'rahul.demo@cb.students.amrita.edu' AND s.name = 'Linux';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'advanced' FROM users u, skills s
+WHERE u.email = 'rahul.demo@cb.students.amrita.edu' AND s.name = 'Mathematics';
+
+-- Priya's Skills
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'expert' FROM users u, skills s
+WHERE u.email = 'priya.demo@cb.students.amrita.edu' AND s.name = 'UI/UX Design';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'expert' FROM users u, skills s
+WHERE u.email = 'priya.demo@cb.students.amrita.edu' AND s.name = 'Figma';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'advanced' FROM users u, skills s
+WHERE u.email = 'priya.demo@cb.students.amrita.edu' AND s.name = 'Graphic Design';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'advanced' FROM users u, skills s
+WHERE u.email = 'priya.demo@cb.students.amrita.edu' AND s.name = 'HTML/CSS';
+
+-- 3. Realistic Faculty Tasks (Created by Demo Faculty)
+INSERT INTO tasks (faculty_id, title, description, task_type, required_skills, deadline, capacity, credit_reward, status)
+SELECT u.id, 'Build a student event webpage',
+  'Design and implement an interactive, accessible event registration webpage for the upcoming Amrita TechFest. Requires responsive React components and clean CSS layout.',
+  'task', 'React,HTML/CSS,JavaScript', DATE_ADD(NOW(), INTERVAL 14 DAY), 2, 15, 'open'
+FROM users u WHERE u.email = 'faculty.demo@cb.amrita.edu'
+AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.faculty_id = u.id AND t.title = 'Build a student event webpage');
+
+INSERT INTO tasks (faculty_id, title, description, task_type, required_skills, deadline, capacity, credit_reward, status)
+SELECT u.id, 'Analyze a sample campus dataset',
+  'Process and generate statistical summaries of anonymized campus facility usage patterns. Identify peak traffic hours and visualize trends using Python and SQL.',
+  'task', 'Python,Data Analysis,SQL,Statistics', DATE_ADD(NOW(), INTERVAL 21 DAY), 2, 20, 'open'
+FROM users u WHERE u.email = 'faculty.demo@cb.amrita.edu'
+AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.faculty_id = u.id AND t.title = 'Analyze a sample campus dataset');
+
+INSERT INTO tasks (faculty_id, title, description, task_type, required_skills, deadline, capacity, credit_reward, status)
+SELECT u.id, 'Help organize a technical workshop',
+  'Assist faculty facilitators during the 2-day Machine Learning Hands-on Bootcamp. Help students with environment setup and document troubleshooting FAQs.',
+  'volunteer', 'Machine Learning,Technical Writing,Public Speaking', DATE_ADD(NOW(), INTERVAL 10 DAY), 3, 12, 'open'
+FROM users u WHERE u.email = 'faculty.demo@cb.amrita.edu'
+AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.faculty_id = u.id AND t.title = 'Help organize a technical workshop');
+
+INSERT INTO tasks (faculty_id, title, description, task_type, required_skills, deadline, capacity, credit_reward, status)
+SELECT u.id, 'Create a campus sustainability poster',
+  'Create creative, high-impact digital and print posters encouraging paper recycling and energy conservation across university labs and hostels.',
+  'task', 'Figma,UI/UX Design,Graphic Design', DATE_ADD(NOW(), INTERVAL 7 DAY), 2, 10, 'open'
+FROM users u WHERE u.email = 'faculty.demo@cb.amrita.edu'
+AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.faculty_id = u.id AND t.title = 'Create a campus sustainability poster');
+
+INSERT INTO tasks (faculty_id, title, description, task_type, required_skills, deadline, capacity, credit_reward, status)
+SELECT u.id, 'Assist with a student club event',
+  'Coordinate student registrations, volunteer logistics, and scheduling for the university coding club hackathon kickoff.',
+  'volunteer', 'Project Management,Public Speaking', DATE_ADD(NOW(), INTERVAL 5 DAY), 4, 10, 'open'
+FROM users u WHERE u.email = 'faculty.demo@cb.amrita.edu'
+AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.faculty_id = u.id AND t.title = 'Assist with a student club event');

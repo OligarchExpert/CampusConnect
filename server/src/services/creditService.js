@@ -91,19 +91,30 @@ async function awardPeerHelpCredit(conn, helperId, requesterId, requestId) {
     [requestId, helperId, requesterId, isFirstTime ? 1 : 0, creditsAwarded, capApplied ? 1 : 0]
   );
 
-  // 6. Record credit transaction in immutable ledger if award > 0
+  // 6. Record credit transaction in immutable ledger (including zero-awards blocked by cap)
+  let desc;
   if (creditsAwarded > 0) {
-    const desc = isFirstTime
-      ? `First-time peer help reward (+${creditsAwarded} credits)`
-      : `Peer help reward (+${creditsAwarded} credits)`;
-
-    await conn.execute(
-      `INSERT INTO credit_transactions
-         (user_id, amount, type, source_id, source_type, description)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [helperId, creditsAwarded, 'peer_help', requestId, 'help_request', desc]
-    );
+    if (capApplied) {
+      desc = isFirstTime
+        ? `First-time peer help reward (+${creditsAwarded} credits — reduced by 24h cap)`
+        : `Peer help reward (+${creditsAwarded} credits — reduced by 24h cap)`;
+    } else {
+      desc = isFirstTime
+        ? `First-time peer help reward (+${creditsAwarded} credits)`
+        : `Peer help reward (+${creditsAwarded} credits)`;
+    }
+  } else {
+    desc = isFirstTime
+      ? 'First-time peer help reward (+0 credits — blocked by 24h rolling cap)'
+      : 'Peer help reward (+0 credits — blocked by 24h rolling cap)';
   }
+
+  await conn.execute(
+    `INSERT INTO credit_transactions
+       (user_id, amount, type, source_id, source_type, description)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [helperId, creditsAwarded, 'peer_help', requestId, 'help_request', desc]
+  );
 
   // 7. Flag suspicious reciprocal exchange: check if B has also helped A
   const [reciprocalRows] = await conn.execute(
@@ -130,9 +141,37 @@ async function awardPeerHelpCredit(conn, helperId, requesterId, requestId) {
   return { creditsAwarded, isFirstTime, capApplied };
 }
 
+/**
+ * Calculates current peer-help allowance within the rolling 24-hour window
+ * @param {number} userId
+ * @param {import('mysql2/promise').Pool|import('mysql2/promise').PoolConnection} poolOrConn
+ */
+async function getPeerHelpAllowance(userId, poolOrConn) {
+  const [capRows] = await poolOrConn.execute(
+    `SELECT COALESCE(SUM(amount), 0) AS earned_in_24h
+     FROM credit_transactions
+     WHERE user_id = ?
+       AND type = 'peer_help'
+       AND amount > 0
+       AND created_at >= NOW() - INTERVAL 24 HOUR`,
+    [userId]
+  );
+
+  const earnedIn24h = parseInt(capRows[0].earned_in_24h, 10);
+  const remainingCap = Math.max(0, DAILY_PEER_CAP - earnedIn24h);
+
+  return {
+    dailyCap: DAILY_PEER_CAP,
+    earnedIn24h,
+    remainingCap,
+    isCapped: remainingCap <= 0
+  };
+}
+
 module.exports = {
   FIRST_TIME_PEER_REWARD,
   SUBSEQUENT_PEER_REWARD,
   DAILY_PEER_CAP,
-  awardPeerHelpCredit
+  awardPeerHelpCredit,
+  getPeerHelpAllowance
 };

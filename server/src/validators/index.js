@@ -14,7 +14,11 @@ const handleValidation = (req, res, next) => {
 
 const registerValidators = [
   body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 100 }).withMessage('Name cannot exceed 100 characters'),
-  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('email')
+    .trim()
+    .isEmail()
+    .withMessage('Valid email address is required (e.g. name@cb.students.amrita.edu, name@cb.amrita.edu, or user@campus.edu)')
+    .normalizeEmail({ gmail_remove_dots: false, all_lowercase: true }),
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
   body('role').isIn(['student', 'faculty']).withMessage('Role must be either student or faculty')
 ];

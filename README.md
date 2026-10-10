@@ -157,12 +157,24 @@ npm run dev
 
 ---
 
-## 👥 Demo Accounts
+## 👥 Demonstration Accounts (Local Testing Only)
 
-Password for all pre-seeded accounts is `Demo1234!`:
-- **Student**: `student@campus.edu`
-- **Faculty**: `faculty@campus.edu`
-- **Admin**: `admin@campus.edu`
+Password for all demonstration accounts is `Demo1234!`:
+
+| Persona | Role | Email Address | Department / Focus |
+|---|---|---|---|
+| **Radhakrishna** | Student | `radhakrishna@cb.students.amrita.edu` | Computer Science (Full Stack, React, Node) |
+| **Anu** | Student | `anu.demo@cb.students.amrita.edu` | AI & Data Science (Python, ML, Analytics) |
+| **Rahul** | Student | `rahul.demo@cb.students.amrita.edu` | ECE (C++, Linux, Systems Programming) |
+| **Priya** | Student | `priya.demo@cb.students.amrita.edu` | CSE (UI/UX, Figma, Interaction Design) |
+| **Demo Faculty** | Faculty | `faculty.demo@cb.amrita.edu` | Computer Science (Innovation Coordinator) |
+| **Demo Administrator** | Admin | `admin.demo@cb.amrita.edu` | Campus Academic Administration |
+
+To populate or re-seed these accounts idempotently:
+```bash
+cd server
+npm run db:seed-amrita
+```
 
 ---
 

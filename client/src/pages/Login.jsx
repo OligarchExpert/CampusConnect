@@ -81,11 +81,26 @@ export default function Login() {
         <div className="auth-footer">
           <p>Don't have an account? <Link to="/register">Register</Link></p>
           <div className="demo-accounts">
-            <p className="demo-label">Demo accounts (password: Demo1234!):</p>
-            <div className="demo-chips">
-              <button className="demo-chip" onClick={() => setForm({ email: 'student@campus.edu', password: 'Demo1234!' })}>Student</button>
-              <button className="demo-chip" onClick={() => setForm({ email: 'faculty@campus.edu', password: 'Demo1234!' })}>Faculty</button>
-              <button className="demo-chip" onClick={() => setForm({ email: 'admin@campus.edu', password: 'Demo1234!' })}>Admin</button>
+            <p className="demo-label">Amrita Demo Profiles (Password: <code>Demo1234!</code>):</p>
+            <div className="demo-chips" style={{ flexWrap: 'wrap', gap: '6px' }}>
+              <button type="button" className="demo-chip" onClick={() => setForm({ email: 'radhakrishna@cb.students.amrita.edu', password: 'Demo1234!' })}>
+                🎓 Radhakrishna (Student)
+              </button>
+              <button type="button" className="demo-chip" onClick={() => setForm({ email: 'anu.demo@cb.students.amrita.edu', password: 'Demo1234!' })}>
+                🎓 Anu (Student)
+              </button>
+              <button type="button" className="demo-chip" onClick={() => setForm({ email: 'rahul.demo@cb.students.amrita.edu', password: 'Demo1234!' })}>
+                🎓 Rahul (Student)
+              </button>
+              <button type="button" className="demo-chip" onClick={() => setForm({ email: 'priya.demo@cb.students.amrita.edu', password: 'Demo1234!' })}>
+                🎓 Priya (Student)
+              </button>
+              <button type="button" className="demo-chip" onClick={() => setForm({ email: 'faculty.demo@cb.amrita.edu', password: 'Demo1234!' })}>
+                👨‍🏫 Demo Faculty
+              </button>
+              <button type="button" className="demo-chip" onClick={() => setForm({ email: 'admin.demo@cb.amrita.edu', password: 'Demo1234!' })}>
+                🛡️ Demo Admin
+              </button>
             </div>
           </div>
         </div>
