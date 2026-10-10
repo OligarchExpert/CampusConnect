@@ -100,8 +100,8 @@ async function awardPeerHelpCredit(conn, helperId, requesterId, requestId) {
     await conn.execute(
       `INSERT INTO credit_transactions
          (user_id, amount, type, source_id, source_type, description)
-       VALUES (?, ?, 'peer_help', ?, 'help_request', ?)`,
-      [helperId, creditsAwarded, requestId, desc]
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [helperId, creditsAwarded, 'peer_help', requestId, 'help_request', desc]
     );
   }
 
@@ -116,11 +116,13 @@ async function awardPeerHelpCredit(conn, helperId, requesterId, requestId) {
     await conn.execute(
       `INSERT INTO reports
          (subject_id, reason, context_type, context_id, status)
-       VALUES (?, ?, 'help_request', ?, 'open')`,
+       VALUES (?, ?, ?, ?, ?)`,
       [
         helperId,
         `Reciprocal peer-help activity detected: User ${helperId} and User ${requesterId} have completed reciprocal requests.`,
-        requestId
+        'help_request',
+        requestId,
+        'open'
       ]
     );
   }

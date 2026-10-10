@@ -39,11 +39,11 @@ INSERT IGNORE INTO skills (name, category) VALUES
 -- DEMO USERS  (passwords are bcrypt hash of "Demo1234!")
 -- ============================================================
 INSERT IGNORE INTO users (name, email, password, role, bio, department) VALUES
-  ('Admin User',      'admin@campus.edu',   '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin',   'Platform administrator.',                    'Administration'),
-  ('Dr. Jane Faculty','faculty@campus.edu', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'faculty', 'Associate Professor, Computer Science.',     'Computer Science'),
-  ('Alex Student',    'student@campus.edu', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'Final year CS student interested in ML.',   'Computer Science'),
-  ('Sam Helper',      'sam@campus.edu',     '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'Third year student, loves helping others.',  'Mathematics'),
-  ('Priya Learner',   'priya@campus.edu',   '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'Second year, exploring data science.',       'Statistics');
+  ('Admin User',      'admin@campus.edu',   '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q', 'admin',   'Platform administrator.',                    'Administration'),
+  ('Dr. Jane Faculty','faculty@campus.edu', '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q', 'faculty', 'Associate Professor, Computer Science.',     'Computer Science'),
+  ('Alex Student',    'student@campus.edu', '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q', 'student', 'Final year CS student interested in ML.',   'Computer Science'),
+  ('Sam Helper',      'sam@campus.edu',     '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q', 'student', 'Third year student, loves helping others.',  'Mathematics'),
+  ('Priya Learner',   'priya@campus.edu',   '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q', 'student', 'Second year, exploring data science.',       'Statistics');
 
 -- NOTE: The bcrypt hash above is the well-known test hash for "password" from Laravel.
 -- For real seeding, generate hashes with: node -e "const b=require('bcryptjs');b.hash('Demo1234!',10).then(h=>console.log(h))"

@@ -104,7 +104,15 @@ CampusConnect/
 - **Git**
 
 ### 2. Database Setup
-Log in to MySQL and load the schema and seed scripts:
+You can initialize the database using either the MySQL CLI or the built-in Node initializer:
+
+**Option A: Automated Node script** (from `server/`):
+```bash
+cd server
+npm run db:init
+```
+
+**Option B: MySQL CLI**:
 ```bash
 mysql -u root -p < database/schema.sql
 mysql -u root -p < database/seed.sql
@@ -132,7 +140,14 @@ npm run dev
 # Server listens on http://localhost:5000
 ```
 
-### 4. Client Setup
+### 4. Running Tests
+Run the automated test suite verifying all 12 credit engine rules and API security:
+```bash
+cd server
+npm test
+```
+
+### 5. Client Setup
 ```bash
 cd client
 npm install
