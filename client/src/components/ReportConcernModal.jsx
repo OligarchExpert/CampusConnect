@@ -80,8 +80,10 @@ export default function ReportConcernModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounced search
+  // Debounced search with race condition / stale response prevention
   useEffect(() => {
+    let active = true;
+
     if (!isOpen || isPreSelected || selectedUser) {
       return;
     }
@@ -100,7 +102,9 @@ export default function ReportConcernModal({
     const handler = setTimeout(async () => {
       try {
         const res = await welfareService.searchUsers(trimmed);
-        if (res.success && Array.isArray(res.users)) {
+        if (!active) return; // Discard stale response if query has changed
+
+        if (res && res.success && Array.isArray(res.users)) {
           setSearchResults(res.users);
           setDropdownOpen(true);
           setHighlightedIndex(-1);
@@ -109,15 +113,22 @@ export default function ReportConcernModal({
           setDropdownOpen(true);
         }
       } catch (err) {
+        if (!active) return;
         console.error('Failed to search accounts:', err);
-        setSearchError('Unable to search accounts. Please check your connection and try again.');
+        const msg = err.response?.data?.message || err.message || 'Unable to search accounts. Please check your connection and try again.';
+        setSearchError(msg);
         setDropdownOpen(true);
       } finally {
-        setSearchLoading(false);
+        if (active) {
+          setSearchLoading(false);
+        }
       }
     }, 250);
 
-    return () => clearTimeout(handler);
+    return () => {
+      active = false;
+      clearTimeout(handler);
+    };
   }, [searchTerm, isOpen, isPreSelected, selectedUser]);
 
   if (!isOpen) return null;
