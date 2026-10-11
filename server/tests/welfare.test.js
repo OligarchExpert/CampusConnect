@@ -16,7 +16,9 @@ const {
   revokeStudentVerification,
   updateComplaintStatus,
   getFacultySummary,
-  searchUsers
+  searchUsers,
+  getMyClassStudents,
+  getVerificationHistory
 } = require('../src/controllers/welfareController');
 const { updateProfile, getProfile } = require('../src/controllers/profileController');
 const { awardPeerHelpCredit } = require('../src/services/creditService');
@@ -615,6 +617,186 @@ async function runWelfareTests() {
     const resNonexistent = mockRes();
     await submitComplaint(reqNonexistent, resNonexistent);
     assert.strictEqual(resNonexistent.statusCode, 422, 'Should reject non-existent user with 422');
+  });
+
+  // Scenario R: An assigned class advisor can see students in their assigned class
+  await test('Scenario R: An assigned class advisor can see students in their assigned class', async () => {
+    const [meera] = await pool.execute("SELECT id FROM users WHERE email = 'meera.nair@cb.amrita.edu'");
+    assert.ok(meera.length > 0, 'Dr. Meera Nair must exist');
+    const req = {
+      user: { id: meera[0].id, role: 'faculty' },
+      query: {}
+    };
+    const res = mockRes();
+    await getMyClassStudents(req, res);
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.body.isAdvisor, true);
+    assert.strictEqual(res.body.classInfo.programme, 'B.Tech CSE');
+    assert.strictEqual(res.body.classInfo.academic_year, 3);
+    assert.strictEqual(res.body.classInfo.section, 'CSE-A');
+    assert.ok(res.body.students.length > 0, 'Should return students enrolled in CSE-A');
+
+    // Test search functionality in class
+    const reqSearch = {
+      user: { id: meera[0].id, role: 'faculty' },
+      query: { q: 'Arjun' }
+    };
+    const resSearch = mockRes();
+    await getMyClassStudents(reqSearch, resSearch);
+    assert.strictEqual(resSearch.statusCode, 200);
+    assert.ok(resSearch.body.students.some(s => s.name === 'Arjun'), 'Search must return Arjun');
+  });
+
+  // Scenario S: The advisor can approve an eligible student, badge shows on profile with advisor & date
+  await test('Scenario S: The advisor can approve an eligible student, badge shows on profile with advisor & date', async () => {
+    const [meera] = await pool.execute("SELECT id FROM users WHERE email = 'meera.nair@cb.amrita.edu'");
+    const [arjun] = await pool.execute("SELECT id FROM users WHERE email = 'arjun.demo@cb.students.amrita.edu'");
+    assert.ok(arjun.length > 0, 'Arjun must exist');
+
+    const reqApprove = {
+      user: { id: meera[0].id, role: 'faculty' },
+      body: { student_id: arjun[0].id, reason: 'Identity verified during advising session' }
+    };
+    const resApprove = mockRes();
+    await verifyStudent(reqApprove, resApprove);
+    assert.strictEqual(resApprove.statusCode, 200);
+    assert.strictEqual(resApprove.body.success, true);
+
+    // Profile check
+    const reqProfile = {
+      params: { userId: arjun[0].id },
+      user: { id: arjun[0].id, role: 'student' }
+    };
+    const resProfile = mockRes();
+    await getProfile(reqProfile, resProfile);
+    assert.strictEqual(resProfile.statusCode, 200);
+    assert.strictEqual(resProfile.body.profile.is_advisor_approved, 1);
+    assert.strictEqual(resProfile.body.profile.advisor_name, 'Dr. Meera Nair');
+    assert.ok(resProfile.body.profile.verification_date, 'Approval date must be present');
+  });
+
+  // Scenario T: An unassigned faculty member cannot approve students
+  await test('Scenario T: An unassigned faculty member cannot approve students', async () => {
+    const [suresh] = await pool.execute("SELECT id FROM users WHERE email = 'suresh.iyer@cb.amrita.edu'");
+    const [arjun] = await pool.execute("SELECT id FROM users WHERE email = 'arjun.demo@cb.students.amrita.edu'");
+    assert.ok(suresh.length > 0, 'Prof. Suresh Iyer must exist');
+
+    // 1. Verify getMyClassStudents returns isAdvisor: false
+    const reqClass = {
+      user: { id: suresh[0].id, role: 'faculty' },
+      query: {}
+    };
+    const resClass = mockRes();
+    await getMyClassStudents(reqClass, resClass);
+    assert.strictEqual(resClass.statusCode, 200);
+    assert.strictEqual(resClass.body.isAdvisor, false);
+    assert.strictEqual(resClass.body.classInfo, null);
+
+    // 2. Verify verifyStudent returns 403
+    const reqApprove = {
+      user: { id: suresh[0].id, role: 'faculty' },
+      body: { student_id: arjun[0].id, reason: 'Unauthorized approval attempt' }
+    };
+    const resApprove = mockRes();
+    await verifyStudent(reqApprove, resApprove);
+    assert.strictEqual(resApprove.statusCode, 403, 'Unassigned faculty must be rejected with 403');
+  });
+
+  // Scenario U: An advisor cannot approve students from another class
+  await test('Scenario U: An advisor cannot approve students from another class', async () => {
+    // Dr. Meera Nair (CSE-A) attempts to approve Anu (AIE-B)
+    const [meera] = await pool.execute("SELECT id FROM users WHERE email = 'meera.nair@cb.amrita.edu'");
+    const [anu] = await pool.execute("SELECT id FROM users WHERE email = 'anu.demo@cb.students.amrita.edu'");
+    assert.ok(anu.length > 0, 'Anu must exist');
+
+    const req = {
+      user: { id: meera[0].id, role: 'faculty' },
+      body: { student_id: anu[0].id, reason: 'Attempt to approve out-of-scope student' }
+    };
+    const res = mockRes();
+    await verifyStudent(req, res);
+    assert.strictEqual(res.statusCode, 403, 'Advisor approving student from another class must be rejected with 403');
+    assert.ok(res.body.message.includes('authorized scope'));
+  });
+
+  // Scenario V: A student cannot approve themselves or modify verification records
+  await test('Scenario V: A student cannot approve themselves or modify verification records', async () => {
+    const [arjun] = await pool.execute("SELECT id FROM users WHERE email = 'arjun.demo@cb.students.amrita.edu'");
+    const req = {
+      user: { id: arjun[0].id, role: 'student' },
+      body: { student_id: arjun[0].id, reason: 'Self modification' }
+    };
+    const res = mockRes();
+    await revokeStudentVerification(req, res);
+    assert.strictEqual(res.statusCode, 403, 'Student cannot modify verification records');
+  });
+
+  // Scenario W: An authorized revocation removes active badge and preserves audit history
+  await test('Scenario W: An authorized revocation removes active badge and preserves audit history', async () => {
+    const [meera] = await pool.execute("SELECT id FROM users WHERE email = 'meera.nair@cb.amrita.edu'");
+    const [arjun] = await pool.execute("SELECT id FROM users WHERE email = 'arjun.demo@cb.students.amrita.edu'");
+
+    const reqRevoke = {
+      user: { id: meera[0].id, role: 'faculty' },
+      body: { student_id: arjun[0].id, reason: 'Testing authorized revocation workflow' }
+    };
+    const resRevoke = mockRes();
+    await revokeStudentVerification(reqRevoke, resRevoke);
+    assert.strictEqual(resRevoke.statusCode, 200);
+
+    // Profile check: badge must be removed
+    const reqProfile = {
+      params: { userId: arjun[0].id },
+      user: { id: arjun[0].id, role: 'student' }
+    };
+    const resProfile = mockRes();
+    await getProfile(reqProfile, resProfile);
+    assert.strictEqual(resProfile.body.profile.is_advisor_approved, 0);
+
+    // Audit check: audit log must record revocation
+    const [auditLogs] = await pool.execute(
+      "SELECT * FROM welfare_audit_logs WHERE target_id = ? AND action_type = 'advisor_badge_revoked' ORDER BY id DESC LIMIT 1",
+      [arjun[0].id]
+    );
+    assert.ok(auditLogs.length > 0, 'Audit log must record badge revocation');
+    assert.strictEqual(auditLogs[0].admin_id, meera[0].id);
+  });
+
+  // Scenario X: Class advisor approval does not automatically verify skills
+  await test('Scenario X: Class advisor approval does not automatically verify skills', async () => {
+    const [arjun] = await pool.execute("SELECT id FROM users WHERE email = 'arjun.demo@cb.students.amrita.edu'");
+    const [skillsBefore] = await pool.execute(
+      'SELECT skill_id, proficiency FROM user_skills WHERE user_id = ? ORDER BY skill_id',
+      [arjun[0].id]
+    );
+
+    // Re-approve Arjun
+    const [meera] = await pool.execute("SELECT id FROM users WHERE email = 'meera.nair@cb.amrita.edu'");
+    const reqApprove = {
+      user: { id: meera[0].id, role: 'faculty' },
+      body: { student_id: arjun[0].id, reason: 'Re-approved for semester' }
+    };
+    await verifyStudent(reqApprove, mockRes());
+
+    const [skillsAfter] = await pool.execute(
+      'SELECT skill_id, proficiency FROM user_skills WHERE user_id = ? ORDER BY skill_id',
+      [arjun[0].id]
+    );
+    assert.strictEqual(skillsBefore.length, skillsAfter.length, 'Skill count must remain unchanged');
+    for (let i = 0; i < skillsBefore.length; i++) {
+      assert.strictEqual(skillsBefore[i].skill_id, skillsAfter[i].skill_id);
+      assert.strictEqual(skillsBefore[i].proficiency, skillsAfter[i].proficiency);
+    }
+
+    const [uRow] = await pool.execute('SELECT faculty_verified_skills FROM users WHERE id = ?', [arjun[0].id]);
+    assert.strictEqual(uRow[0].faculty_verified_skills, null, 'Faculty verified skills must not be altered by identity approval');
+
+    // Reset Arjun to unverified state for clean demo baseline
+    const reqRevoke = {
+      user: { id: meera[0].id, role: 'faculty' },
+      body: { student_id: arjun[0].id, reason: 'Reset to demo initial state' }
+    };
+    await revokeStudentVerification(reqRevoke, mockRes());
   });
 
   console.log(`\nStudent Welfare Test Summary: ${passed} passed, ${failed} failed.\n`);

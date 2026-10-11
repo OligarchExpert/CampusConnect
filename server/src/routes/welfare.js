@@ -20,6 +20,8 @@ router.get('/search-users',                    authenticateToken, wc.searchUsers
 
 // 2. Class Advisors & Student Verification
 router.get('/advisors',                        authenticateToken, wc.listAdvisors);
+router.get('/advisors/my-class',               advisorOrAdmin,    wc.getMyClassStudents);
+router.get('/advisors/history',                advisorOrAdmin,    wc.getVerificationHistory);
 router.post('/advisors/verify-student',        advisorOrAdmin,    wc.verifyStudent);
 router.post('/advisors/revoke-student',        advisorOrAdmin,    wc.revokeStudentVerification);
 

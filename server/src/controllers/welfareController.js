@@ -641,7 +641,7 @@ const verifyStudent = async (req, res) => {
 
   const sId = parseInt(student_id, 10);
 
-  // A student cannot approve their own badge
+  // A student cannot approve their own badge or award badges to peers
   if (user.role === 'student' || user.id === sId) {
     return res.status(403).json({
       success: false,
@@ -651,7 +651,7 @@ const verifyStudent = async (req, res) => {
 
   try {
     const [sRows] = await pool.execute(
-      'SELECT id, name, advisor_id, is_advisor_approved FROM users WHERE id = ? AND role = "student"',
+      'SELECT id, name, advisor_id, programme, academic_year, section, is_advisor_approved FROM users WHERE id = ? AND role = "student"',
       [sId]
     );
     if (sRows.length === 0) {
@@ -660,20 +660,30 @@ const verifyStudent = async (req, res) => {
     const student = sRows[0];
 
     // Check scope: must be admin OR the assigned class advisor for this student
+    let effectiveAdvisorId = student.advisor_id;
     if (user.role === 'faculty') {
-      if (!student.advisor_id) {
-        return res.status(403).json({ success: false, message: 'Student is not assigned to a class advisor' });
-      }
       const [advRows] = await pool.execute(
-        'SELECT faculty_id FROM class_advisors WHERE id = ?',
-        [student.advisor_id]
+        'SELECT id, programme, academic_year, section FROM class_advisors WHERE faculty_id = ?',
+        [user.id]
       );
-      if (advRows.length === 0 || advRows[0].faculty_id !== user.id) {
+      if (advRows.length === 0) {
         return res.status(403).json({
           success: false,
           message: 'An advisor can verify an eligible student only within their authorized scope'
         });
       }
+      const myAdv = advRows[0];
+      const matchesScope = (student.advisor_id === myAdv.id) ||
+                           (student.programme === myAdv.programme &&
+                            student.academic_year === myAdv.academic_year &&
+                            student.section === myAdv.section);
+      if (!matchesScope) {
+        return res.status(403).json({
+          success: false,
+          message: 'An advisor can verify an eligible student only within their authorized scope'
+        });
+      }
+      effectiveAdvisorId = myAdv.id;
     }
 
     const conn = await pool.getConnection();
@@ -681,19 +691,22 @@ const verifyStudent = async (req, res) => {
       await conn.beginTransaction();
 
       await conn.execute(
-        'UPDATE users SET is_advisor_approved = 1, advisor_approved_at = NOW() WHERE id = ?',
-        [sId]
+        'UPDATE users SET is_advisor_approved = 1, advisor_approved_at = NOW(), advisor_id = COALESCE(advisor_id, ?) WHERE id = ?',
+        [effectiveAdvisorId, sId]
       );
 
       await conn.execute(
         `INSERT INTO advisor_verifications (student_id, advisor_id, verified_by_user_id, status, reason, verified_at)
          VALUES (?, COALESCE(?, 1), ?, 'approved', ?, NOW())`,
-        [sId, student.advisor_id, user.id, reason || 'Class identity and affiliation confirmed']
+        [sId, effectiveAdvisorId, user.id, reason || 'Class identity and affiliation confirmed']
       );
 
       await conn.commit();
 
-      await recordAuditLog(user.id, 'advisor_badge_awarded', 'user', sId, { reason });
+      await recordAuditLog(user.id, 'advisor_badge_awarded', 'user', sId, {
+        advisor_id: effectiveAdvisorId,
+        reason: reason || 'Class identity and affiliation confirmed'
+      });
 
       res.json({
         success: true,
@@ -724,17 +737,38 @@ const revokeStudentVerification = async (req, res) => {
 
   const sId = parseInt(student_id, 10);
 
+  // A student cannot revoke badges
+  if (user.role === 'student' || user.id === sId) {
+    return res.status(403).json({ success: false, message: 'Students cannot modify verification records' });
+  }
+
   try {
-    const [sRows] = await pool.execute('SELECT advisor_id FROM users WHERE id = ?', [sId]);
+    const [sRows] = await pool.execute(
+      'SELECT id, name, advisor_id, programme, academic_year, section FROM users WHERE id = ? AND role = "student"',
+      [sId]
+    );
     if (sRows.length === 0) return res.status(404).json({ success: false, message: 'Student not found' });
     const student = sRows[0];
 
     // Must be admin or the assigned advisor
+    let effectiveAdvisorId = student.advisor_id;
     if (user.role === 'faculty') {
-      const [advRows] = await pool.execute('SELECT faculty_id FROM class_advisors WHERE id = ?', [student.advisor_id]);
-      if (advRows.length === 0 || advRows[0].faculty_id !== user.id) {
+      const [advRows] = await pool.execute(
+        'SELECT id, programme, academic_year, section FROM class_advisors WHERE faculty_id = ?',
+        [user.id]
+      );
+      if (advRows.length === 0) {
         return res.status(403).json({ success: false, message: 'Not authorized to revoke this student badge' });
       }
+      const myAdv = advRows[0];
+      const matchesScope = (student.advisor_id === myAdv.id) ||
+                           (student.programme === myAdv.programme &&
+                            student.academic_year === myAdv.academic_year &&
+                            student.section === myAdv.section);
+      if (!matchesScope) {
+        return res.status(403).json({ success: false, message: 'Not authorized to revoke this student badge' });
+      }
+      effectiveAdvisorId = myAdv.id;
     }
 
     const conn = await pool.getConnection();
@@ -754,7 +788,10 @@ const revokeStudentVerification = async (req, res) => {
 
       await conn.commit();
 
-      await recordAuditLog(user.id, 'advisor_badge_revoked', 'user', sId, { reason });
+      await recordAuditLog(user.id, 'advisor_badge_revoked', 'user', sId, {
+        reason: reason.trim(),
+        advisor_id: effectiveAdvisorId
+      });
 
       res.json({ success: true, message: 'Class Advisor Approved badge revoked' });
     } catch (err) {
@@ -1055,6 +1092,151 @@ const searchUsers = async (req, res) => {
   }
 };
 
+/**
+ * 18. Get Class Advisor's assigned class information and students
+ * Accessible to faculty and admin
+ */
+const getMyClassStudents = async (req, res) => {
+  const user = req.user;
+  const search = (req.query.q || '').trim();
+
+  try {
+    let advisorId = null;
+    let classInfo = null;
+
+    if (user.role === 'faculty') {
+      const [advRows] = await pool.execute(
+        `SELECT ca.*, u.name AS faculty_name, u.email AS faculty_email, u.department AS faculty_dept
+         FROM class_advisors ca
+         JOIN users u ON u.id = ca.faculty_id
+         WHERE ca.faculty_id = ?`,
+        [user.id]
+      );
+
+      if (advRows.length === 0) {
+        return res.json({
+          success: true,
+          isAdvisor: false,
+          classInfo: null,
+          students: []
+        });
+      }
+
+      classInfo = advRows[0];
+      advisorId = classInfo.id;
+    } else if (user.role === 'admin') {
+      const reqAdvisorId = req.query.advisorId ? parseInt(req.query.advisorId, 10) : null;
+      let advQuery = `SELECT ca.*, u.name AS faculty_name, u.email AS faculty_email, u.department AS faculty_dept
+                      FROM class_advisors ca
+                      JOIN users u ON u.id = ca.faculty_id`;
+      const advParams = [];
+      if (reqAdvisorId) {
+        advQuery += ' WHERE ca.id = ?';
+        advParams.push(reqAdvisorId);
+      }
+      advQuery += ' LIMIT 1';
+      const [advRows] = await pool.execute(advQuery, advParams);
+      if (advRows.length > 0) {
+        classInfo = advRows[0];
+        advisorId = classInfo.id;
+      } else {
+        return res.json({ success: true, isAdvisor: false, classInfo: null, students: [] });
+      }
+    } else {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
+
+    // Query students in this class
+    let query = `
+      SELECT u.id, u.name, u.email, u.student_id_num, u.department, u.programme,
+             u.academic_year, u.section, u.is_advisor_approved, u.advisor_approved_at,
+             u.advisor_id, u.created_at,
+             av.verified_at, av.reason AS verification_reason,
+             verifier.name AS verified_by_name
+      FROM users u
+      LEFT JOIN advisor_verifications av ON av.id = (
+        SELECT MAX(id) FROM advisor_verifications WHERE student_id = u.id AND status = 'approved'
+      )
+      LEFT JOIN users verifier ON verifier.id = av.verified_by_user_id
+      WHERE u.role = 'student'
+        AND u.is_active = 1
+        AND (
+          u.advisor_id = ?
+          OR (u.programme = ? AND u.academic_year = ? AND u.section = ?)
+        )
+    `;
+    const params = [advisorId, classInfo.programme, classInfo.academic_year, classInfo.section];
+
+    if (search) {
+      query += ` AND (u.name LIKE ? OR u.email LIKE ? OR u.student_id_num LIKE ?)`;
+      const term = `%${search}%`;
+      params.push(term, term, term);
+    }
+
+    query += ` ORDER BY u.name ASC`;
+
+    const [students] = await pool.execute(query, params);
+
+    res.json({
+      success: true,
+      isAdvisor: true,
+      classInfo: {
+        id: classInfo.id,
+        department: classInfo.department,
+        programme: classInfo.programme,
+        academic_year: classInfo.academic_year,
+        section: classInfo.section,
+        advisor_name: classInfo.faculty_name,
+        advisor_email: classInfo.faculty_email
+      },
+      students
+    });
+  } catch (err) {
+    console.error('[Get My Class Students Error]', err);
+    res.status(500).json({ success: false, message: 'Failed to retrieve class students' });
+  }
+};
+
+/**
+ * 19. Get verification audit history (Student Welfare & Class Advisors)
+ */
+const getVerificationHistory = async (req, res) => {
+  const user = req.user;
+
+  try {
+    let query = `
+      SELECT av.*, s.name AS student_name, s.email AS student_email, s.student_id_num,
+             s.programme, s.academic_year, s.section,
+             v.name AS verified_by_name, v.role AS verified_by_role,
+             ca.programme AS class_programme, ca.section AS class_section, ca.department AS class_department
+      FROM advisor_verifications av
+      JOIN users s ON s.id = av.student_id
+      JOIN users v ON v.id = av.verified_by_user_id
+      LEFT JOIN class_advisors ca ON ca.id = av.advisor_id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    // If faculty, only show verifications within their assigned class
+    if (user.role === 'faculty') {
+      const [advRows] = await pool.execute('SELECT id FROM class_advisors WHERE faculty_id = ?', [user.id]);
+      if (advRows.length === 0) {
+        return res.json({ success: true, history: [] });
+      }
+      query += ' AND av.advisor_id = ?';
+      params.push(advRows[0].id);
+    }
+
+    query += ' ORDER BY COALESCE(av.revoked_at, av.verified_at) DESC LIMIT 100';
+
+    const [history] = await pool.execute(query, params);
+    res.json({ success: true, history });
+  } catch (err) {
+    console.error('[Get Verification History Error]', err);
+    res.status(500).json({ success: false, message: 'Failed to retrieve verification history' });
+  }
+};
+
 module.exports = {
   submitComplaint,
   listComplaints,
@@ -1072,5 +1254,7 @@ module.exports = {
   appealWarning,
   reverseWarning,
   listAdvisors,
-  searchUsers
+  searchUsers,
+  getMyClassStudents,
+  getVerificationHistory
 };

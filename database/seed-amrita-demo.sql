@@ -298,3 +298,81 @@ SELECT u.id, 'Vulnerability Assessment of Student Portal Modules',
 FROM users u WHERE u.email = 'kavitha.rao@cb.amrita.edu'
 AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.faculty_id = u.id AND t.title = 'Vulnerability Assessment of Student Portal Modules');
 
+-- ============================================================
+-- 4. CLASS ADVISORS & STUDENT VERIFICATION DATA
+-- ============================================================
+
+-- Assign Dr. Meera Nair as Class Advisor for B.Tech CSE, Year 3, Section CSE-A
+INSERT INTO class_advisors (faculty_id, department, programme, academic_year, section)
+SELECT u.id, 'Computer Science and Engineering', 'B.Tech CSE', 3, 'CSE-A'
+FROM users u WHERE u.email = 'meera.nair@cb.amrita.edu'
+ON DUPLICATE KEY UPDATE faculty_id = VALUES(faculty_id);
+
+-- Assign Dr. Arun Kumar as Class Advisor for B.Tech AI & DS, Year 3, Section AIE-B
+INSERT INTO class_advisors (faculty_id, department, programme, academic_year, section)
+SELECT u.id, 'Artificial Intelligence & Data Science', 'B.Tech AI & DS', 3, 'AIE-B'
+FROM users u WHERE u.email = 'arun.kumar@cb.amrita.edu'
+ON DUPLICATE KEY UPDATE faculty_id = VALUES(faculty_id);
+
+-- Assign Prof. Lakshmi Menon as Class Advisor for B.Tech ECE, Year 3, Section ECE-A
+INSERT INTO class_advisors (faculty_id, department, programme, academic_year, section)
+SELECT u.id, 'Electronics and Communication Engineering', 'B.Tech ECE', 3, 'ECE-A'
+FROM users u WHERE u.email = 'lakshmi.menon@cb.amrita.edu'
+ON DUPLICATE KEY UPDATE faculty_id = VALUES(faculty_id);
+
+-- Link students to their class advisors
+UPDATE users u
+JOIN class_advisors ca ON ca.programme = u.programme AND ca.academic_year = u.academic_year AND ca.section = u.section
+SET u.advisor_id = ca.id
+WHERE u.role = 'student';
+
+-- Ensure Priya is marked verified with a real advisor_verifications record
+UPDATE users u
+JOIN class_advisors ca ON ca.id = u.advisor_id
+SET u.is_advisor_approved = 1, u.advisor_approved_at = DATE_SUB(NOW(), INTERVAL 14 DAY)
+WHERE u.email = 'priya.demo@cb.students.amrita.edu';
+
+INSERT INTO advisor_verifications (student_id, advisor_id, verified_by_user_id, status, reason, verified_at)
+SELECT u.id, ca.id, ca.faculty_id, 'approved', 'Class identity and affiliation confirmed during semester registration.', DATE_SUB(NOW(), INTERVAL 14 DAY)
+FROM users u
+JOIN class_advisors ca ON ca.id = u.advisor_id
+WHERE u.email = 'priya.demo@cb.students.amrita.edu'
+AND NOT EXISTS (
+  SELECT 1 FROM advisor_verifications av WHERE av.student_id = u.id AND av.status = 'approved'
+);
+
+UPDATE advisor_verifications av
+JOIN users u ON u.id = av.student_id
+JOIN class_advisors ca ON ca.id = u.advisor_id
+SET av.verified_by_user_id = ca.faculty_id, av.advisor_id = ca.id
+WHERE u.email = 'priya.demo@cb.students.amrita.edu' AND av.status = 'approved';
+
+-- Ensure Anu is marked verified with a real advisor_verifications record
+UPDATE users u
+JOIN class_advisors ca ON ca.id = u.advisor_id
+SET u.is_advisor_approved = 1, u.advisor_approved_at = DATE_SUB(NOW(), INTERVAL 7 DAY)
+WHERE u.email = 'anu.demo@cb.students.amrita.edu';
+
+INSERT INTO advisor_verifications (student_id, advisor_id, verified_by_user_id, status, reason, verified_at)
+SELECT u.id, ca.id, ca.faculty_id, 'approved', 'Class identity and affiliation confirmed during semester registration.', DATE_SUB(NOW(), INTERVAL 7 DAY)
+FROM users u
+JOIN class_advisors ca ON ca.id = u.advisor_id
+WHERE u.email = 'anu.demo@cb.students.amrita.edu'
+AND NOT EXISTS (
+  SELECT 1 FROM advisor_verifications av WHERE av.student_id = u.id AND av.status = 'approved'
+);
+
+UPDATE advisor_verifications av
+JOIN users u ON u.id = av.student_id
+JOIN class_advisors ca ON ca.id = u.advisor_id
+SET av.verified_by_user_id = ca.faculty_id, av.advisor_id = ca.id
+WHERE u.email = 'anu.demo@cb.students.amrita.edu' AND av.status = 'approved';
+
+-- Ensure Arjun and Rahul start as unverified (0) so they can be verified during testing/demo
+UPDATE users SET is_advisor_approved = 0, advisor_approved_at = NULL
+WHERE email IN ('arjun.demo@cb.students.amrita.edu', 'rahul.demo@cb.students.amrita.edu');
+DELETE av FROM advisor_verifications av
+JOIN users u ON u.id = av.student_id
+WHERE u.email IN ('arjun.demo@cb.students.amrita.edu', 'rahul.demo@cb.students.amrita.edu');
+
+

@@ -37,11 +37,11 @@ async function seedWelfare() {
     // Faculty 7: ME Year 2-A
     // Faculty 8: CYS Year 3-A
     const advisorDefs = [
-      { email: 'faculty01@cb.amrita.edu', dept: 'Computer Science and Engineering', prog: 'B.Tech CSE', yr: 3, sec: 'CSE-A' },
+      { email: facMap['meera.nair@cb.amrita.edu'] ? 'meera.nair@cb.amrita.edu' : 'faculty01@cb.amrita.edu', dept: 'Computer Science and Engineering', prog: 'B.Tech CSE', yr: 3, sec: 'CSE-A' },
       { email: 'faculty02@cb.amrita.edu', dept: 'Computer Science and Engineering', prog: 'B.Tech CSE', yr: 4, sec: 'CSE-B' },
       { email: 'faculty03@cb.amrita.edu', dept: 'Artificial Intelligence & Data Science', prog: 'B.Tech AI & DS', yr: 2, sec: 'AIE-A' },
-      { email: 'faculty04@cb.amrita.edu', dept: 'Artificial Intelligence & Data Science', prog: 'B.Tech AI & DS', yr: 3, sec: 'AIE-B' },
-      { email: 'faculty05@cb.amrita.edu', dept: 'Electronics and Communication Engineering', prog: 'B.Tech ECE', yr: 3, sec: 'ECE-A' },
+      { email: facMap['arun.kumar@cb.amrita.edu'] ? 'arun.kumar@cb.amrita.edu' : 'faculty04@cb.amrita.edu', dept: 'Artificial Intelligence & Data Science', prog: 'B.Tech AI & DS', yr: 3, sec: 'AIE-B' },
+      { email: facMap['lakshmi.menon@cb.amrita.edu'] ? 'lakshmi.menon@cb.amrita.edu' : 'faculty05@cb.amrita.edu', dept: 'Electronics and Communication Engineering', prog: 'B.Tech ECE', yr: 3, sec: 'ECE-A' },
       { email: 'faculty06@cb.amrita.edu', dept: 'Electronics and Communication Engineering', prog: 'B.Tech ECE', yr: 4, sec: 'ECE-A' },
       { email: 'faculty07@cb.amrita.edu', dept: 'Mechanical Engineering', prog: 'B.Tech ME', yr: 2, sec: 'ME-A' },
       { email: 'faculty08@cb.amrita.edu', dept: 'Cyber Security', prog: 'B.Tech CYS', yr: 3, sec: 'CYS-A' }
@@ -77,11 +77,12 @@ async function seedWelfare() {
       "SELECT id, name, advisor_id FROM users WHERE role = 'student' AND advisor_id IS NOT NULL"
     );
 
-    // Verify select students (e.g. half of them)
+    // Verify select students (e.g. half of them), keeping Arjun and Rahul unapproved for advisor testing
     const approvedIndices = [0, 1, 3, 5, 7, 9, 11, 15, 17];
     for (const idx of approvedIndices) {
       if (studentsWithAdv[idx]) {
         const s = studentsWithAdv[idx];
+        if (s.name === 'Arjun' || s.name === 'Rahul') continue;
         const [advRows] = await conn.query('SELECT faculty_id FROM class_advisors WHERE id = ?', [s.advisor_id]);
         const facId = advRows[0]?.faculty_id;
 
@@ -265,11 +266,19 @@ async function seedWelfare() {
     console.log('[Seed Welfare] Comprehensive Student Welfare seed completed successfully! 🎉');
   } catch (err) {
     console.error('[Seed Welfare Error]', err);
-    process.exit(1);
+    throw err;
   } finally {
     conn.release();
-    process.exit(0);
   }
 }
 
-seedWelfare();
+if (require.main === module) {
+  seedWelfare()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
+}
+
+module.exports = { seedWelfare };

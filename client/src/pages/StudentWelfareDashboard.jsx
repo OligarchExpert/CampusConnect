@@ -11,6 +11,7 @@ export default function StudentWelfareDashboard() {
   const [facultySummary, setFacultySummary] = useState([]);
   const [warnings, setWarnings] = useState([]);
   const [advisors, setAdvisors] = useState([]);
+  const [verificationHistory, setVerificationHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -24,7 +25,7 @@ export default function StudentWelfareDashboard() {
 
   const loadData = async () => {
     try {
-      const [sRes, cRes, fRes, wRes, aRes] = await Promise.all([
+      const [sRes, cRes, fRes, wRes, aRes, vRes] = await Promise.all([
         welfareService.getDashboardStats(),
         welfareService.listComplaints({
           status: statusFilter !== 'all' ? statusFilter : undefined,
@@ -33,7 +34,8 @@ export default function StudentWelfareDashboard() {
         }),
         welfareService.getFacultySummary(),
         welfareService.listWarnings(),
-        welfareService.listAdvisors()
+        welfareService.listAdvisors(),
+        welfareService.getVerificationHistory()
       ]);
 
       setStats(sRes.stats);
@@ -41,6 +43,7 @@ export default function StudentWelfareDashboard() {
       setFacultySummary(fRes.faculty || []);
       setWarnings(wRes.warnings || []);
       setAdvisors(aRes.advisors || []);
+      setVerificationHistory(vRes.history || []);
     } catch (err) {
       setError('Failed to load Student Welfare records.');
     } finally {
@@ -457,35 +460,115 @@ export default function StudentWelfareDashboard() {
         </div>
       )}
 
-      {/* TAB 4: CLASS ADVISORS */}
+      {/* TAB 4: CLASS ADVISORS & VERIFICATION AUDIT */}
       {activeTab === 'advisors' && (
-        <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
-                <th style={{ padding: '12px 16px' }}>Advisor Name</th>
-                <th style={{ padding: '12px 16px' }}>Department</th>
-                <th style={{ padding: '12px 16px' }}>Programme</th>
-                <th style={{ padding: '12px 16px' }}>Year</th>
-                <th style={{ padding: '12px 16px' }}>Section</th>
-                <th style={{ padding: '12px 16px' }}>Affiliation Scope</th>
-              </tr>
-            </thead>
-            <tbody>
-              {advisors.map(a => (
-                <tr key={a.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '12px 16px', fontWeight: 600 }}>{a.faculty_name}</td>
-                  <td style={{ padding: '12px 16px' }}>{a.department}</td>
-                  <td style={{ padding: '12px 16px' }}>{a.programme}</td>
-                  <td style={{ padding: '12px 16px' }}>Year {a.academic_year}</td>
-                  <td style={{ padding: '12px 16px' }}>{a.section}</td>
-                  <td style={{ padding: '12px 16px', color: '#059669' }}>
-                    Authorized Class Advisor
-                  </td>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {/* Class Advisor Assignments */}
+          <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>
+                Class Advisor Assignments & Authorized Scopes
+              </h3>
+              <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.8rem' }}>
+                Only faculty members officially assigned to a cohort are authorized to grant or revoke the Class Advisor Approved badge.
+              </p>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
+                  <th style={{ padding: '12px 16px' }}>Advisor Name</th>
+                  <th style={{ padding: '12px 16px' }}>Department</th>
+                  <th style={{ padding: '12px 16px' }}>Programme</th>
+                  <th style={{ padding: '12px 16px' }}>Year</th>
+                  <th style={{ padding: '12px 16px' }}>Section</th>
+                  <th style={{ padding: '12px 16px' }}>Affiliation Scope</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {advisors.map(a => (
+                  <tr key={a.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 600 }}>{a.faculty_name}</td>
+                    <td style={{ padding: '12px 16px' }}>{a.department}</td>
+                    <td style={{ padding: '12px 16px' }}>{a.programme}</td>
+                    <td style={{ padding: '12px 16px' }}>Year {a.academic_year}</td>
+                    <td style={{ padding: '12px 16px' }}>{a.section}</td>
+                    <td style={{ padding: '12px 16px', color: '#059669', fontWeight: 600 }}>
+                      ✓ Authorized Class Advisor
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Verification & Revocation Audit History */}
+          <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>
+                Verification & Revocation Audit History
+              </h3>
+              <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.8rem' }}>
+                Comprehensive ledger of student verification approvals and revocations with acting advisors and documented reasons.
+              </p>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
+                  <th style={{ padding: '12px 16px' }}>Student</th>
+                  <th style={{ padding: '12px 16px' }}>Class / Cohort</th>
+                  <th style={{ padding: '12px 16px' }}>Acting Advisor / Admin</th>
+                  <th style={{ padding: '12px 16px' }}>Action</th>
+                  <th style={{ padding: '12px 16px' }}>Reason / Note</th>
+                  <th style={{ padding: '12px 16px' }}>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                {verificationHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
+                      No verification or revocation records recorded yet.
+                    </td>
+                  </tr>
+                ) : (
+                  verificationHistory.map(h => {
+                    const isApproved = h.status === 'approved';
+                    return (
+                      <tr key={h.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: 600 }}>{h.student_name}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{h.student_id_num || h.student_email}</div>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          {h.programme || h.class_programme} · Yr {h.academic_year} ({h.section || h.class_section})
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: 600 }}>{h.verified_by_name}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{h.verified_by_role}</div>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{
+                            display: 'inline-block', padding: '2px 8px', borderRadius: 12,
+                            fontWeight: 600, fontSize: '0.75rem',
+                            backgroundColor: isApproved ? '#ecfdf5' : '#fee2e2',
+                            color: isApproved ? '#047857' : '#991b1b',
+                            border: `1px solid ${isApproved ? '#10b981' : '#f87171'}`
+                          }}>
+                            {isApproved ? '✓ Approved' : 'Revoked'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px', maxWidth: 260, fontSize: '0.8rem', color: '#334155' }}>
+                          {h.reason || '—'}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: '0.8rem', color: '#64748b' }}>
+                          {new Date(h.revoked_at || h.verified_at).toLocaleString()}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

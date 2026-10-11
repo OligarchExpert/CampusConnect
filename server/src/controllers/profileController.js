@@ -8,10 +8,18 @@ const getProfile = async (req, res) => {
               u.student_id_num, u.programme, u.academic_year, u.section,
               u.advisor_id, u.is_advisor_approved, u.advisor_approved_at,
               u.faculty_verified_skills, u.created_at,
-              adv_u.name AS advisor_name, adv_u.department AS advisor_department
+              COALESCE(adv_u.name, v_u.name) AS advisor_name,
+              adv_u.department AS advisor_department,
+              v_u.name AS verifier_name,
+              COALESCE(u.advisor_approved_at, av.verified_at) AS verification_date,
+              av.reason AS verification_reason
        FROM users u
        LEFT JOIN class_advisors ca ON ca.id = u.advisor_id
        LEFT JOIN users adv_u ON adv_u.id = ca.faculty_id
+       LEFT JOIN advisor_verifications av ON av.id = (
+         SELECT MAX(id) FROM advisor_verifications WHERE student_id = u.id AND status = 'approved'
+       )
+       LEFT JOIN users v_u ON v_u.id = av.verified_by_user_id
        WHERE u.id = ? AND u.is_active = 1`,
       [userId]
     );

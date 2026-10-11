@@ -11,6 +11,8 @@ export const welfareService = {
   uploadEvidence:         (id, data)   => api.post(`/welfare/complaints/${id}/evidence`, data).then(r => r.data),
 
   listAdvisors:           ()           => api.get('/welfare/advisors').then(r => r.data),
+  getMyClass:             (params)     => api.get('/welfare/advisors/my-class', { params }).then(r => r.data),
+  getVerificationHistory: ()           => api.get('/welfare/advisors/history').then(r => r.data),
   verifyStudent:          (data)       => api.post('/welfare/advisors/verify-student', data).then(r => r.data),
   revokeStudent:          (data)       => api.post('/welfare/advisors/revoke-student', data).then(r => r.data),
 

@@ -162,21 +162,33 @@ export default function Profile() {
               <span className={`badge badge-${profile.role}`}>{profile.role}</span>
 
               {/* Trust Badges */}
-              <div style={{ marginTop: 12, marginBottom: 12 }}>
-                {profile.is_advisor_approved ? (
-                  <div style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '4px 10px', backgroundColor: '#ecfdf5', border: '1px solid #10b981',
-                    borderRadius: 20, color: '#047857', fontWeight: 600, fontSize: '0.85rem'
-                  }} title="Class identity and registration confirmed by authorized Class Advisor. Does not indicate technical skill competence.">
-                    <span>🛡️ Class Advisor Approved</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#065f46' }}>✓ Verified</span>
-                  </div>
-                ) : (
-                  profile.role === 'student' && (
-                    <span style={{ fontSize: '0.8rem', color: '#6b7280', fontStyle: 'italic' }}>
-                      Identity Verification Pending
-                    </span>
+              <div style={{ marginTop: 12, marginBottom: 12, textAlign: 'center' }}>
+                {profile.role === 'student' && (
+                  profile.is_advisor_approved ? (
+                    <div style={{
+                      display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                      padding: '8px 16px', backgroundColor: '#ecfdf5', border: '1px solid #10b981',
+                      borderRadius: 16, color: '#047857', textAlign: 'center'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: '0.95rem' }}>
+                        <span>✓ Class Advisor Approved</span>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#065f46', fontWeight: 500 }}>
+                        Verified by {profile.advisor_name || 'Class Advisor'}
+                        {profile.verification_date && ` · ${new Date(profile.verification_date).toLocaleDateString()}`}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#047857', opacity: 0.85, fontStyle: 'italic', marginTop: 2 }}>
+                        Confirms identity & class affiliation. Does not certify technical skills.
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '6px 14px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1',
+                      borderRadius: 16, color: '#64748b', fontSize: '0.8rem', fontWeight: 500
+                    }}>
+                      <span>Identity Verification: Not yet verified</span>
+                    </div>
                   )
                 )}
               </div>
@@ -186,6 +198,14 @@ export default function Profile() {
                 textAlign: 'left', width: '100%', backgroundColor: '#f9fafb',
                 padding: '12px', borderRadius: '6px', margin: '12px 0', fontSize: '0.875rem'
               }}>
+                {profile.role === 'student' && (
+                  <p style={{ margin: '4px 0' }}>
+                    <strong>Verification Status:</strong>{' '}
+                    <span style={{ color: profile.is_advisor_approved ? '#047857' : '#64748b', fontWeight: 600 }}>
+                      {profile.is_advisor_approved ? '✓ Class Advisor Approved' : 'Not yet verified'}
+                    </span>
+                  </p>
+                )}
                 {profile.student_id_num && (
                   <p style={{ margin: '4px 0' }}>
                     <strong>Student ID:</strong> {profile.student_id_num}
@@ -207,6 +227,11 @@ export default function Profile() {
                 {profile.advisor_name && (
                   <p style={{ margin: '4px 0' }}>
                     <strong>Class Advisor:</strong> {profile.advisor_name}
+                  </p>
+                )}
+                {profile.is_advisor_approved && profile.verification_date && (
+                  <p style={{ margin: '4px 0' }}>
+                    <strong>Approval Date:</strong> {new Date(profile.verification_date).toLocaleDateString()}
                   </p>
                 )}
               </div>
