@@ -20,7 +20,7 @@ export default function Navbar() {
   return (
     <nav className="navbar">
       <div className="navbar-brand">
-        <Link to="/" className="brand-link">
+        <Link to="/" className="brand-link" onClick={() => setMenuOpen(false)}>
           <span className="brand-icon">🎓</span>
           <span className="brand-name">CampusConnect</span>
         </Link>
