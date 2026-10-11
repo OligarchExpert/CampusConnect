@@ -14,9 +14,9 @@
  * Idempotent: Can be run multiple times safely without duplicate rows or overwriting.
  */
 
-require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const mysql = require('mysql2/promise');
 
 async function seedAmritaDemo() {

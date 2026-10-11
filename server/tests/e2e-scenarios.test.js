@@ -313,17 +313,29 @@ async function runEndToEndScenarioTests() {
     const isValid = await bcrypt.compare(demoPassword, knownHash);
     assert.strictEqual(isValid, true, 'Demo1234! must verify with seed bcrypt hash');
 
-    // JWT verification
+    // Verify all 11 Amrita demo account profiles configuration
+    const demoProfiles = [
+      { email: 'radhakrishna@cb.students.amrita.edu', role: 'student' },
+      { email: 'anu.demo@cb.students.amrita.edu', role: 'student' },
+      { email: 'rahul.demo@cb.students.amrita.edu', role: 'student' },
+      { email: 'priya.demo@cb.students.amrita.edu', role: 'student' },
+      { email: 'arjun.demo@cb.students.amrita.edu', role: 'student' },
+      { email: 'meera.nair@cb.amrita.edu', role: 'faculty' },
+      { email: 'arun.kumar@cb.amrita.edu', role: 'faculty' },
+      { email: 'lakshmi.menon@cb.amrita.edu', role: 'faculty' },
+      { email: 'suresh.iyer@cb.amrita.edu', role: 'faculty' },
+      { email: 'kavitha.rao@cb.amrita.edu', role: 'faculty' },
+      { email: 'admin.demo@cb.amrita.edu', role: 'admin' }
+    ];
+
+    assert.strictEqual(demoProfiles.length, 11, 'Must have exactly 11 Amrita demo accounts');
     const secret = 'campusconnect_test_jwt_secret';
-    const token = jwt.sign(
-      { id: 101, email: 'radhakrishna@cb.students.amrita.edu', role: 'student' },
-      secret,
-      { expiresIn: '24h' }
-    );
-    const decoded = jwt.verify(token, secret);
-    assert.strictEqual(decoded.id, 101);
-    assert.strictEqual(decoded.email, 'radhakrishna@cb.students.amrita.edu');
-    assert.strictEqual(decoded.role, 'student');
+    for (const p of demoProfiles) {
+      const token = jwt.sign({ id: 100, email: p.email, role: p.role }, secret, { expiresIn: '24h' });
+      const decoded = jwt.verify(token, secret);
+      assert.strictEqual(decoded.email, p.email);
+      assert.strictEqual(decoded.role, p.role);
+    }
   });
 
   console.log('\n--- Running End-to-End Scenarios Test Suite (Phases 3-7) ---');

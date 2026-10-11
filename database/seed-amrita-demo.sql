@@ -46,6 +46,15 @@ VALUES
     1
   ),
   (
+    'Arjun',
+    'arjun.demo@cb.students.amrita.edu',
+    '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
+    'student',
+    'Third-year CS student passionate about competitive programming, data structures, and algorithm optimization.',
+    'Computer Science and Engineering',
+    1
+  ),
+  (
     'Demo Faculty',
     'faculty.demo@cb.amrita.edu',
     '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
@@ -55,15 +64,61 @@ VALUES
     1
   ),
   (
-    'Demo Administrator',
+    'Dr. Meera Nair',
+    'meera.nair@cb.amrita.edu',
+    '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
+    'faculty',
+    'Associate Professor, Computer Science and Engineering. Specializing in artificial intelligence, neural architectures, and intelligent tutoring systems.',
+    'Computer Science and Engineering',
+    1
+  ),
+  (
+    'Dr. Arun Kumar',
+    'arun.kumar@cb.amrita.edu',
+    '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
+    'faculty',
+    'Professor, Artificial Intelligence & Data Science. Leading campus data analytics initiatives and supervising distributed systems research.',
+    'Artificial Intelligence & Data Science',
+    1
+  ),
+  (
+    'Prof. Lakshmi Menon',
+    'lakshmi.menon@cb.amrita.edu',
+    '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
+    'faculty',
+    'Assistant Professor, Electronics and Communication Engineering. Researching embedded hardware, sensor networks, and IoT applications.',
+    'Electronics and Communication Engineering',
+    1
+  ),
+  (
+    'Prof. Suresh Iyer',
+    'suresh.iyer@cb.amrita.edu',
+    '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
+    'faculty',
+    'Associate Professor, Mechanical Engineering. Coordinating sustainability initiatives, robotics competitions, and campus engineering projects.',
+    'Mechanical Engineering',
+    1
+  ),
+  (
+    'Dr. Kavitha Rao',
+    'kavitha.rao@cb.amrita.edu',
+    '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
+    'faculty',
+    'Associate Professor, Cyber Security. Guiding student projects in network security, cryptography, and secure software development.',
+    'Cyber Security',
+    1
+  ),
+  (
+    'Student Welfare Administrator',
     'admin.demo@cb.amrita.edu',
     '$2a$10$OroX0tBVzIQeaUxGGqXZsOLB77Vo1u90haAi/g2a6mgl50UUNMC8q',
     'admin',
-    'CampusConnect platform administrator handling governance, audit logs, and verified credit ledger inspection.',
+    'CampusConnect Student Welfare and platform administrator handling student welfare, governance, audit logs, and verified credit ledger inspection.',
     'Campus Academic Administration',
     1
   )
 ON DUPLICATE KEY UPDATE
+  name = VALUES(name),
   bio = VALUES(bio),
   department = VALUES(department),
   is_active = VALUES(is_active);
@@ -142,6 +197,31 @@ INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
 SELECT u.id, s.id, 'advanced' FROM users u, skills s
 WHERE u.email = 'priya.demo@cb.students.amrita.edu' AND s.name = 'HTML/CSS';
 
+-- Arjun's Skills
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'expert' FROM users u, skills s
+WHERE u.email = 'arjun.demo@cb.students.amrita.edu' AND s.name = 'C++';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'expert' FROM users u, skills s
+WHERE u.email = 'arjun.demo@cb.students.amrita.edu' AND s.name = 'Python';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'advanced' FROM users u, skills s
+WHERE u.email = 'arjun.demo@cb.students.amrita.edu' AND s.name = 'SQL';
+
+INSERT IGNORE INTO user_skills (user_id, skill_id, proficiency)
+SELECT u.id, s.id, 'advanced' FROM users u, skills s
+WHERE u.email = 'arjun.demo@cb.students.amrita.edu' AND s.name = 'Machine Learning';
+
+-- Academic Affiliation for Arjun
+UPDATE users SET
+  student_id_num = 'CB.EN.U4CSE23105',
+  programme = 'B.Tech CSE',
+  academic_year = 3,
+  section = 'CSE-A'
+WHERE email = 'arjun.demo@cb.students.amrita.edu';
+
 -- 3. Realistic Faculty Tasks (Created by Demo Faculty)
 INSERT INTO tasks (faculty_id, title, description, task_type, required_skills, deadline, capacity, credit_reward, status)
 SELECT u.id, 'Build a student event webpage',
@@ -177,3 +257,44 @@ SELECT u.id, 'Assist with a student club event',
   'volunteer', 'Project Management,Public Speaking', DATE_ADD(NOW(), INTERVAL 5 DAY), 4, 10, 'open'
 FROM users u WHERE u.email = 'faculty.demo@cb.amrita.edu'
 AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.faculty_id = u.id AND t.title = 'Assist with a student club event');
+
+-- Tasks by Dr. Meera Nair
+INSERT INTO tasks (faculty_id, title, description, task_type, required_skills, deadline, capacity, credit_reward, status)
+SELECT u.id, 'NLP Dataset Annotation for Indian Languages',
+  'Annotate and curate conversational dataset for low-resource Indian languages. Assist research lab in preprocessing text corpora and evaluating tokenizers.',
+  'task', 'Python,Machine Learning,Data Analysis', DATE_ADD(NOW(), INTERVAL 18 DAY), 3, 18, 'open'
+FROM users u WHERE u.email = 'meera.nair@cb.amrita.edu'
+AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.faculty_id = u.id AND t.title = 'NLP Dataset Annotation for Indian Languages');
+
+-- Tasks by Dr. Arun Kumar
+INSERT INTO tasks (faculty_id, title, description, task_type, required_skills, deadline, capacity, credit_reward, status)
+SELECT u.id, 'Real-Time Campus Energy Sensor Pipeline',
+  'Develop a data ingestion script to parse IoT telemetry from campus solar meters and stream metrics into PostgreSQL/MySQL dashboards.',
+  'task', 'Python,SQL,Docker', DATE_ADD(NOW(), INTERVAL 25 DAY), 2, 20, 'open'
+FROM users u WHERE u.email = 'arun.kumar@cb.amrita.edu'
+AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.faculty_id = u.id AND t.title = 'Real-Time Campus Energy Sensor Pipeline');
+
+-- Tasks by Prof. Lakshmi Menon
+INSERT INTO tasks (faculty_id, title, description, task_type, required_skills, deadline, capacity, credit_reward, status)
+SELECT u.id, 'Smart Campus IoT Beacon Setup',
+  'Assist with assembling and testing Bluetooth Low Energy beacons for student lab attendance automation and asset tracking.',
+  'volunteer', 'Linux,Git,Project Management', DATE_ADD(NOW(), INTERVAL 14 DAY), 4, 12, 'open'
+FROM users u WHERE u.email = 'lakshmi.menon@cb.amrita.edu'
+AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.faculty_id = u.id AND t.title = 'Smart Campus IoT Beacon Setup');
+
+-- Tasks by Prof. Suresh Iyer
+INSERT INTO tasks (faculty_id, title, description, task_type, required_skills, deadline, capacity, credit_reward, status)
+SELECT u.id, '3D Modeling for Engineering Lab Apparatus',
+  'Create clean CAD/Figma diagrams and 3D schematics for student laboratory experiment manuals and technical documentation.',
+  'task', 'UI/UX Design,Technical Writing,Research', DATE_ADD(NOW(), INTERVAL 12 DAY), 2, 15, 'open'
+FROM users u WHERE u.email = 'suresh.iyer@cb.amrita.edu'
+AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.faculty_id = u.id AND t.title = '3D Modeling for Engineering Lab Apparatus');
+
+-- Tasks by Dr. Kavitha Rao
+INSERT INTO tasks (faculty_id, title, description, task_type, required_skills, deadline, capacity, credit_reward, status)
+SELECT u.id, 'Vulnerability Assessment of Student Portal Modules',
+  'Conduct systematic OWASP testing and code auditing of student submission modules. Report vulnerability reproductions and remediation steps.',
+  'task', 'Linux,Python,Technical Writing', DATE_ADD(NOW(), INTERVAL 20 DAY), 2, 25, 'open'
+FROM users u WHERE u.email = 'kavitha.rao@cb.amrita.edu'
+AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.faculty_id = u.id AND t.title = 'Vulnerability Assessment of Student Portal Modules');
+

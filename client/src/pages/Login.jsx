@@ -36,7 +36,7 @@ export default function Login() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
+      <div className="auth-card auth-card-wide" style={{ maxWidth: '520px' }}>
         <div className="auth-header">
           <span className="auth-logo">🎓</span>
           <h1>CampusConnect</h1>
@@ -81,26 +81,68 @@ export default function Login() {
         <div className="auth-footer">
           <p>Don't have an account? <Link to="/register">Register</Link></p>
           <div className="demo-accounts">
-            <p className="demo-label">Amrita Demo Profiles (Password: <code>Demo1234!</code>):</p>
-            <div className="demo-chips" style={{ flexWrap: 'wrap', gap: '6px' }}>
-              <button type="button" className="demo-chip" onClick={() => setForm({ email: 'radhakrishna@cb.students.amrita.edu', password: 'Demo1234!' })}>
-                🎓 Radhakrishna (Student)
-              </button>
-              <button type="button" className="demo-chip" onClick={() => setForm({ email: 'anu.demo@cb.students.amrita.edu', password: 'Demo1234!' })}>
-                🎓 Anu (Student)
-              </button>
-              <button type="button" className="demo-chip" onClick={() => setForm({ email: 'rahul.demo@cb.students.amrita.edu', password: 'Demo1234!' })}>
-                🎓 Rahul (Student)
-              </button>
-              <button type="button" className="demo-chip" onClick={() => setForm({ email: 'priya.demo@cb.students.amrita.edu', password: 'Demo1234!' })}>
-                🎓 Priya (Student)
-              </button>
-              <button type="button" className="demo-chip" onClick={() => setForm({ email: 'faculty.demo@cb.amrita.edu', password: 'Demo1234!' })}>
-                👨‍🏫 Demo Faculty
-              </button>
-              <button type="button" className="demo-chip" onClick={() => setForm({ email: 'admin.demo@cb.amrita.edu', password: 'Demo1234!' })}>
-                🛡️ Demo Admin
-              </button>
+            <p className="demo-label" style={{ marginBottom: '12px' }}>
+              Amrita Demo Profiles (Password: <code>Demo1234!</code>):
+            </p>
+
+            {/* Students */}
+            <div style={{ marginBottom: '12px', textAlign: 'left' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                Students
+              </div>
+              <div className="demo-chips" style={{ flexWrap: 'wrap', gap: '6px', justifyContent: 'flex-start' }}>
+                <button type="button" className="demo-chip" onClick={() => setForm({ email: 'radhakrishna@cb.students.amrita.edu', password: 'Demo1234!' })}>
+                  🎓 Radhakrishna (Student)
+                </button>
+                <button type="button" className="demo-chip" onClick={() => setForm({ email: 'anu.demo@cb.students.amrita.edu', password: 'Demo1234!' })}>
+                  🎓 Anu (Student)
+                </button>
+                <button type="button" className="demo-chip" onClick={() => setForm({ email: 'rahul.demo@cb.students.amrita.edu', password: 'Demo1234!' })}>
+                  🎓 Rahul (Student)
+                </button>
+                <button type="button" className="demo-chip" onClick={() => setForm({ email: 'priya.demo@cb.students.amrita.edu', password: 'Demo1234!' })}>
+                  🎓 Priya (Student)
+                </button>
+                <button type="button" className="demo-chip" onClick={() => setForm({ email: 'arjun.demo@cb.students.amrita.edu', password: 'Demo1234!' })}>
+                  🎓 Arjun (Student)
+                </button>
+              </div>
+            </div>
+
+            {/* Faculty */}
+            <div style={{ marginBottom: '12px', textAlign: 'left' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                Faculty
+              </div>
+              <div className="demo-chips" style={{ flexWrap: 'wrap', gap: '6px', justifyContent: 'flex-start' }}>
+                <button type="button" className="demo-chip" onClick={() => setForm({ email: 'meera.nair@cb.amrita.edu', password: 'Demo1234!' })}>
+                  👨‍🏫 Dr. Meera Nair (Faculty)
+                </button>
+                <button type="button" className="demo-chip" onClick={() => setForm({ email: 'arun.kumar@cb.amrita.edu', password: 'Demo1234!' })}>
+                  👨‍🏫 Dr. Arun Kumar (Faculty)
+                </button>
+                <button type="button" className="demo-chip" onClick={() => setForm({ email: 'lakshmi.menon@cb.amrita.edu', password: 'Demo1234!' })}>
+                  👨‍🏫 Prof. Lakshmi Menon (Faculty)
+                </button>
+                <button type="button" className="demo-chip" onClick={() => setForm({ email: 'suresh.iyer@cb.amrita.edu', password: 'Demo1234!' })}>
+                  👨‍🏫 Prof. Suresh Iyer (Faculty)
+                </button>
+                <button type="button" className="demo-chip" onClick={() => setForm({ email: 'kavitha.rao@cb.amrita.edu', password: 'Demo1234!' })}>
+                  👨‍🏫 Dr. Kavitha Rao (Faculty)
+                </button>
+              </div>
+            </div>
+
+            {/* Student Welfare */}
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                Student Welfare
+              </div>
+              <div className="demo-chips" style={{ flexWrap: 'wrap', gap: '6px', justifyContent: 'flex-start' }}>
+                <button type="button" className="demo-chip" onClick={() => setForm({ email: 'admin.demo@cb.amrita.edu', password: 'Demo1234!' })}>
+                  🛡️ Student Welfare (Administrator)
+                </button>
+              </div>
             </div>
           </div>
         </div>
