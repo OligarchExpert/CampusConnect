@@ -60,8 +60,8 @@ export default function HelpRequestDetail() {
   if (loading) return <LoadingSpinner fullPage />;
   if (error || !request) return <ErrorMessage message={error || 'Help request not found'} />;
 
-  const isRequester = user.id === request.requester_id;
-  const isHelper = user.id === request.helper_id;
+  const isRequester = Boolean(user && request && Number(user.id) === Number(request.requester_id));
+  const isHelper = Boolean(user && request && Number(user.id) === Number(request.helper_id));
 
   const statusFlow = [
     { key: 'open', label: '1. Open' },
@@ -248,7 +248,7 @@ export default function HelpRequestDetail() {
       </div>
 
       {/* Helper Trust & Reputation Card */}
-      {request.helper_id && (
+      {request.helper_id && !isHelper && (
         <div className="card" style={{ marginTop: 20, borderLeft: '4px solid #3b82f6' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
             <div>
@@ -270,15 +270,13 @@ export default function HelpRequestDetail() {
               </p>
             </div>
 
-            {user?.id !== request.helper_id && (
-              <button
-                className="btn btn-sm"
-                onClick={() => setShowReportModal(true)}
-                style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}
-              >
-                🚩 Report a Concern
-              </button>
-            )}
+            <button
+              className="btn btn-sm"
+              onClick={() => setShowReportModal(true)}
+              style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}
+            >
+              🚩 Report a Concern
+            </button>
           </div>
 
           <div style={{
@@ -350,7 +348,7 @@ export default function HelpRequestDetail() {
       )}
 
       {/* Report Concern Modal */}
-      {user?.id !== request.helper_id && (
+      {request.helper_id && !isHelper && (
         <ReportConcernModal
           isOpen={showReportModal}
           onClose={() => setShowReportModal(false)}
