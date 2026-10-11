@@ -16,6 +16,7 @@ router.put('/complaints/:id/notes',            adminOnly,         wc.updateInves
 router.post('/complaints/:id/decide',          adminOnly,         wc.decideComplaint);
 router.post('/complaints/:id/reverse-credit',  adminOnly,         wc.reverseCreditAward);
 router.post('/complaints/:id/evidence',        authenticateToken, wc.uploadEvidence);
+router.get('/search-users',                    authenticateToken, wc.searchUsers);
 
 // 2. Class Advisors & Student Verification
 router.get('/advisors',                        authenticateToken, wc.listAdvisors);

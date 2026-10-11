@@ -19,5 +19,6 @@ export const welfareService = {
 
   listWarnings:           ()           => api.get('/welfare/warnings').then(r => r.data),
   appealWarning:          (id, data)   => api.post(`/welfare/warnings/${id}/appeal`, data).then(r => r.data),
-  reverseWarning:         (id, data)   => api.post(`/welfare/warnings/${id}/reverse`, data).then(r => r.data)
+  reverseWarning:         (id, data)   => api.post(`/welfare/warnings/${id}/reverse`, data).then(r => r.data),
+  searchUsers:            (query)      => api.get('/welfare/search-users', { params: { q: query } }).then(r => r.data)
 };

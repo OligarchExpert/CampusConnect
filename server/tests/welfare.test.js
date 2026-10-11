@@ -15,7 +15,8 @@ const {
   verifyStudent,
   revokeStudentVerification,
   updateComplaintStatus,
-  getFacultySummary
+  getFacultySummary,
+  searchUsers
 } = require('../src/controllers/welfareController');
 const { updateProfile, getProfile } = require('../src/controllers/profileController');
 const { awardPeerHelpCredit } = require('../src/services/creditService');
@@ -539,6 +540,81 @@ async function runWelfareTests() {
     // The seed script has idempotent ON DUPLICATE KEY UPDATE and checks
     const [afterCount] = await pool.execute('SELECT COUNT(*) AS total FROM users');
     assert.strictEqual(beforeCount[0].total, afterCount[0].total, 'User count must remain identical');
+  });
+
+  // Scenario P: Search accounts endpoint returns valid matches, excludes self & passwords
+  await test('Scenario P: Search accounts endpoint returns valid matches, excludes self & passwords', async () => {
+    // 1. Search by name
+    const reqSearch = {
+      user: { id: s1.id, role: 'student' },
+      query: { q: s2.name.substring(0, 3) }
+    };
+    const resSearch = mockRes();
+    await searchUsers(reqSearch, resSearch);
+    assert.strictEqual(resSearch.statusCode, 200);
+    assert.strictEqual(resSearch.body.success, true);
+    assert.ok(Array.isArray(resSearch.body.users));
+
+    // Check that s2 is in results
+    const foundS2 = resSearch.body.users.find(u => u.id === s2.id);
+    assert.ok(foundS2, `User ${s2.name} should be found`);
+    assert.strictEqual(foundS2.password, undefined, 'Password must never be exposed');
+    assert.ok(foundS2.name && foundS2.email && foundS2.role);
+
+    // 2. Caller (s1) must NOT be returned in results (cannot report self)
+    const foundS1 = resSearch.body.users.find(u => u.id === s1.id);
+    assert.strictEqual(foundS1, undefined, 'Calling user must be excluded from search results');
+
+    // 3. Empty query returns empty list without error
+    const reqEmpty = {
+      user: { id: s1.id, role: 'student' },
+      query: { q: '   ' }
+    };
+    const resEmpty = mockRes();
+    await searchUsers(reqEmpty, resEmpty);
+    assert.strictEqual(resEmpty.body.users.length, 0, 'Empty query should return empty array');
+  });
+
+  // Scenario Q: Complaint submission validation enforces valid reported user & rejects self-reporting
+  await test('Scenario Q: Complaint submission validation enforces valid reported user & rejects self-reporting', async () => {
+    // 1. Missing reported_user_id
+    const reqMissing = {
+      user: { id: s1.id, role: 'student' },
+      body: {
+        category: 'other',
+        description: 'Complaint with missing target account'
+      }
+    };
+    const resMissing = mockRes();
+    await submitComplaint(reqMissing, resMissing);
+    assert.strictEqual(resMissing.statusCode, 422, 'Should reject missing reported_user_id with 422');
+
+    // 2. Self-reporting attempt
+    const reqSelf = {
+      user: { id: s1.id, role: 'student' },
+      body: {
+        reported_user_id: s1.id,
+        category: 'other',
+        description: 'Attempt to file complaint against self'
+      }
+    };
+    const resSelf = mockRes();
+    await submitComplaint(reqSelf, resSelf);
+    assert.strictEqual(resSelf.statusCode, 422, 'Should reject self-reporting with 422');
+    assert.ok(resSelf.body.message.includes('yourself'));
+
+    // 3. Nonexistent user ID
+    const reqNonexistent = {
+      user: { id: s1.id, role: 'student' },
+      body: {
+        reported_user_id: 999999,
+        category: 'other',
+        description: 'Attempt to file complaint against non-existent account'
+      }
+    };
+    const resNonexistent = mockRes();
+    await submitComplaint(reqNonexistent, resNonexistent);
+    assert.strictEqual(resNonexistent.statusCode, 422, 'Should reject non-existent user with 422');
   });
 
   console.log(`\nStudent Welfare Test Summary: ${passed} passed, ${failed} failed.\n`);

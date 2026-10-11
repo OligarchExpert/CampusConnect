@@ -210,9 +210,7 @@ export default function MyComplaints() {
       <ReportConcernModal
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
-        reportedUserId={1}
-        reportedUserName="Select or enter in description"
-        contextType="other"
+        contextType="user"
         onSuccess={() => {
           setActionMsg('Concern submitted to Student Welfare.');
           loadData();

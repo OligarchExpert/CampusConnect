@@ -55,9 +55,28 @@ const submitComplaint = async (req, res) => {
   if (!reported_user_id) {
     return res.status(422).json({ success: false, message: 'Reported person is required' });
   }
-  if (parseInt(reported_user_id, 10) === complainantId) {
+
+  const targetId = parseInt(reported_user_id, 10);
+  if (isNaN(targetId) || targetId <= 0) {
+    return res.status(422).json({ success: false, message: 'Invalid reported account ID' });
+  }
+
+  if (targetId === complainantId) {
     return res.status(422).json({ success: false, message: 'You cannot submit a complaint against yourself' });
   }
+
+  // Validate that reported user exists and is active
+  const [targetRows] = await pool.execute(
+    'SELECT id, name, role, is_active FROM users WHERE id = ?',
+    [targetId]
+  );
+  if (targetRows.length === 0) {
+    return res.status(422).json({ success: false, message: 'The specified reported account was not found' });
+  }
+  if (!targetRows[0].is_active) {
+    return res.status(422).json({ success: false, message: 'The specified account is deactivated' });
+  }
+
   if (!category || !VALID_CATEGORIES.includes(category)) {
     return res.status(422).json({ success: false, message: 'A valid complaint category is required' });
   }
@@ -73,6 +92,8 @@ const submitComplaint = async (req, res) => {
   try {
     await conn.beginTransaction();
 
+    const safeContextType = ['help_request', 'task', 'submission', 'user', 'credit'].includes(context_type) ? context_type : null;
+
     const [result] = await conn.execute(
       `INSERT INTO complaints (
          complaint_ref, complainant_id, reported_user_id, category, context_type,
@@ -81,9 +102,9 @@ const submitComplaint = async (req, res) => {
       [
         complaintRef,
         complainantId,
-        reported_user_id,
+        targetId,
         category,
-        context_type || null,
+        safeContextType,
         context_id || null,
         description.trim(),
         original_work_details || null,
@@ -988,6 +1009,52 @@ const listAdvisors = async (req, res) => {
   }
 };
 
+/**
+ * 17. Search accounts for reporting (safe: no passwords/hashes, excludes caller)
+ */
+const searchUsers = async (req, res) => {
+  const currentUserId = req.user.id;
+  const rawQuery = (req.query.q || '').toString().trim();
+
+  // If query is empty or too short, return empty array
+  if (!rawQuery || rawQuery.length < 1) {
+    return res.json({ success: true, users: [] });
+  }
+
+  try {
+    const searchTerm = `%${rawQuery}%`;
+    const prefixTerm = `${rawQuery}%`;
+
+    const [rows] = await pool.execute(
+      `SELECT id, name, email, role, department, programme, academic_year, section, student_id_num
+       FROM users
+       WHERE is_active = 1
+         AND id != ?
+         AND role IN ('student', 'faculty')
+         AND (
+           name LIKE ?
+           OR email LIKE ?
+           OR student_id_num LIKE ?
+           OR department LIKE ?
+         )
+       ORDER BY 
+         CASE 
+           WHEN name LIKE ? THEN 1 
+           WHEN email LIKE ? THEN 2 
+           ELSE 3 
+         END,
+         name ASC
+       LIMIT 15`,
+      [currentUserId, searchTerm, searchTerm, searchTerm, searchTerm, prefixTerm, prefixTerm]
+    );
+
+    res.json({ success: true, users: rows });
+  } catch (err) {
+    console.error('[Search Users Error]', err);
+    res.status(500).json({ success: false, message: 'Failed to search accounts' });
+  }
+};
+
 module.exports = {
   submitComplaint,
   listComplaints,
@@ -1004,5 +1071,6 @@ module.exports = {
   listWarnings,
   appealWarning,
   reverseWarning,
-  listAdvisors
+  listAdvisors,
+  searchUsers
 };
