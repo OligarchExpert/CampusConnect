@@ -270,13 +270,15 @@ export default function HelpRequestDetail() {
               </p>
             </div>
 
-            <button
-              className="btn btn-sm"
-              onClick={() => setShowReportModal(true)}
-              style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}
-            >
-              🚩 Report a Concern
-            </button>
+            {user?.id !== request.helper_id && (
+              <button
+                className="btn btn-sm"
+                onClick={() => setShowReportModal(true)}
+                style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}
+              >
+                🚩 Report a Concern
+              </button>
+            )}
           </div>
 
           <div style={{
@@ -348,15 +350,17 @@ export default function HelpRequestDetail() {
       )}
 
       {/* Report Concern Modal */}
-      <ReportConcernModal
-        isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        reportedUserId={request.helper_id || request.requester_id}
-        reportedUserName={request.helper_name || request.requester_name}
-        contextType="help_request"
-        contextId={request.id}
-        onSuccess={() => setActionMsg('Your concern was submitted to Student Welfare for review.')}
-      />
+      {user?.id !== request.helper_id && (
+        <ReportConcernModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          reportedUserId={request.helper_id}
+          reportedUserName={request.helper_name}
+          contextType="help_request"
+          contextId={request.id}
+          onSuccess={() => setActionMsg('Your concern was submitted to Student Welfare for review.')}
+        />
+      )}
     </div>
   );
 }

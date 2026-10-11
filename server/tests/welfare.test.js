@@ -8,6 +8,7 @@ const assert = require('assert');
 const pool = require('../src/config/db');
 const {
   submitComplaint,
+  listComplaints,
   getComplaint,
   decideComplaint,
   reverseCreditAward,
@@ -797,6 +798,60 @@ async function runWelfareTests() {
       body: { student_id: arjun[0].id, reason: 'Reset to demo initial state' }
     };
     await revokeStudentVerification(reqRevoke, mockRes());
+  });
+
+  // Scenario Y: Self-reporting rejection and cross-user report acceptance
+  await test('Scenario Y: Rahul cannot report himself via API (422), but Anu can report Rahul', async () => {
+    const [rahulRows] = await pool.execute('SELECT id, name FROM users WHERE email = ?', ['rahul.demo@cb.students.amrita.edu']);
+    const [anuRows] = await pool.execute('SELECT id, name FROM users WHERE email = ?', ['anu.demo@cb.students.amrita.edu']);
+    assert.ok(rahulRows.length > 0 && anuRows.length > 0, 'Rahul and Anu demo accounts must exist');
+    const rahul = rahulRows[0];
+    const anu = anuRows[0];
+
+    // 1. Rahul tries to report himself via direct API request
+    const reqRahulSelf = {
+      user: { id: rahul.id, role: 'student' },
+      body: {
+        reported_user_id: rahul.id,
+        category: 'peer_help_misrepresentation',
+        description: 'Attempting to submit complaint against myself'
+      }
+    };
+    const resRahulSelf = mockRes();
+    await submitComplaint(reqRahulSelf, resRahulSelf);
+    assert.strictEqual(resRahulSelf.statusCode, 422, 'Rahul reporting himself must be rejected with 422');
+    assert.ok(resRahulSelf.body.message.includes('yourself'), 'Error message must specify cannot report self');
+
+    // 2. Anu reports Rahul (legitimate report against another user)
+    const reqAnuReportsRahul = {
+      user: { id: anu.id, role: 'student' },
+      body: {
+        reported_user_id: rahul.id,
+        category: 'peer_help_misrepresentation',
+        description: 'Anu reporting helper Rahul for inaccurate explanations during peer session'
+      }
+    };
+    const resAnuReportsRahul = mockRes();
+    await submitComplaint(reqAnuReportsRahul, resAnuReportsRahul);
+    assert.strictEqual(resAnuReportsRahul.statusCode, 201, 'Anu reporting Rahul must succeed with 201');
+    assert.ok(resAnuReportsRahul.body.complaint?.id, 'Response must include created complaint ID');
+  });
+
+  // Scenario Z: Student Welfare Administrator can review legitimate reports
+  await test('Scenario Z: Student Welfare Administrator can access and review legitimate reports', async () => {
+    const [adminRows] = await pool.execute('SELECT id, name, role FROM users WHERE email = ?', ['admin.demo@cb.amrita.edu']);
+    assert.ok(adminRows.length > 0, 'Admin account must exist');
+    const admin = adminRows[0];
+
+    // Query complaints as admin
+    const reqAdmin = {
+      user: { id: admin.id, role: 'admin' },
+      query: {}
+    };
+    const resAdmin = mockRes();
+    await listComplaints(reqAdmin, resAdmin);
+    assert.strictEqual(resAdmin.statusCode, 200, 'Student Welfare should retrieve complaints list');
+    assert.ok(resAdmin.body.complaints.length > 0, 'Complaints list should contain reports');
   });
 
   console.log(`\nStudent Welfare Test Summary: ${passed} passed, ${failed} failed.\n`);

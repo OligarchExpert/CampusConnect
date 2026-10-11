@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { welfareService } from '../services/welfareService';
 
 export default function ReportConcernModal({
@@ -10,6 +11,7 @@ export default function ReportConcernModal({
   contextId,
   onSuccess
 }) {
+  const { user: currentUser } = useAuth();
   const isPreSelected = Boolean(reportedUserId);
 
   // Selected account state
@@ -48,12 +50,19 @@ export default function ReportConcernModal({
   useEffect(() => {
     if (isOpen) {
       if (reportedUserId) {
-        setSelectedUser({
-          id: reportedUserId,
-          name: reportedUserName || `User ID: ${reportedUserId}`
-        });
+        if (currentUser && Number(reportedUserId) === Number(currentUser.id)) {
+          setSelectedUser(null);
+          setError('You cannot submit a report against your own account.');
+        } else {
+          setSelectedUser({
+            id: reportedUserId,
+            name: reportedUserName || `User ID: ${reportedUserId}`
+          });
+          setError('');
+        }
       } else {
         setSelectedUser(null);
+        setError('');
       }
       setSearchTerm('');
       setSearchResults([]);
@@ -63,11 +72,10 @@ export default function ReportConcernModal({
       setHighlightedIndex(-1);
       setAccountNotes('');
       setShowNotesField(false);
-      setError('');
       setSuccessMsg('');
       setLoading(false);
     }
-  }, [isOpen, reportedUserId, reportedUserName]);
+  }, [isOpen, reportedUserId, reportedUserName, currentUser]);
 
   // Click-outside listener for the search dropdown
   useEffect(() => {
@@ -157,8 +165,12 @@ export default function ReportConcernModal({
     }
   };
 
-  const handleSelectAccount = (user) => {
-    setSelectedUser(user);
+  const handleSelectAccount = (account) => {
+    if (currentUser && Number(account.id) === Number(currentUser.id)) {
+      setError('You cannot select your own account.');
+      return;
+    }
+    setSelectedUser(account);
     setSearchTerm('');
     setDropdownOpen(false);
     setHighlightedIndex(-1);
@@ -187,6 +199,11 @@ export default function ReportConcernModal({
 
     if (!targetUserId) {
       setError('Please search and select the account of the person you are reporting.');
+      return;
+    }
+
+    if (currentUser && Number(targetUserId) === Number(currentUser.id)) {
+      setError('You cannot submit a report against your own account.');
       return;
     }
 
@@ -695,12 +712,12 @@ export default function ReportConcernModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || Boolean(currentUser && selectedUser && Number(selectedUser.id) === Number(currentUser.id))}
               style={{
                 padding: '8px 16px', background: '#dc2626', color: '#fff',
                 border: 'none', borderRadius: '4px', fontWeight: 600,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.7 : 1
+                cursor: (loading || Boolean(currentUser && selectedUser && Number(selectedUser.id) === Number(currentUser.id))) ? 'not-allowed' : 'pointer',
+                opacity: (loading || Boolean(currentUser && selectedUser && Number(selectedUser.id) === Number(currentUser.id))) ? 0.7 : 1
               }}
             >
               {loading ? 'Submitting…' : 'Submit Concern'}
