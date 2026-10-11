@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -79,7 +79,6 @@ export default function Login() {
         </form>
 
         <div className="auth-footer">
-          <p>Don't have an account? <Link to="/register">Register</Link></p>
           <div className="demo-accounts">
             <p className="demo-label" style={{ marginBottom: '12px' }}>
               Amrita Demo Profiles (Password: <code>Demo1234!</code>):
